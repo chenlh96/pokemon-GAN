@@ -42,6 +42,7 @@ class pokemonDataset(Dataset):
         img = Image.open(sel_sample[0], 'r')
         img_2arr = np.asarray(img)
         return {'image': img_2arr, 'tags': sel_sample[1:]}
+        test = "modified"
 
 
     def load_sample_dir(self):
