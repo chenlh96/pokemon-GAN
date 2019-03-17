@@ -30,7 +30,7 @@ class pokemonDataset(Dataset):
             assert artwork_types == listdir(self.image_dir)
             self.artwork_types = artwork_types
         self.is_add_i2v_tag = is_add_i2v_tag
-        self.sample_dir  = None
+        self.sample_dir = None
 
         self.load_sample_dir()
 
@@ -42,19 +42,19 @@ class pokemonDataset(Dataset):
         img = Image.open(sel_sample[0], 'r')
         img_2arr = np.asarray(img)
         return {'image': img_2arr, 'tags': sel_sample[1:]}
-        test = "modified"
 
 
     def load_sample_dir(self):
         list_csv = listdir(self.tag_dir)
         csv_dict = {}
-        for csv in list_csv:
-            for aw in self.artwork_types:
-                if os.path.isfile(csv) and aw in csv:
-                    if 'i2v' not in csv:
-                        csv_dict[aw] = [self.tag_dir + '/' + csv]
-                    if self.is_add_i2v_tag and 'i2v' in csv:
-                        csv_dict[aw] = csv_dict[aw].append(self.tag_dir + '/' + csv)
+        for aw in self.artwork_types:
+            csv_dict[aw] = None
+            for csv_f in list_csv:
+                if os.path.isfile(self.tag_dir + '/' + csv_f) and aw in csv_f:
+                    if 'i2v' not in csv_f:
+                        csv_dict[aw] = [self.tag_dir + '/' + csv_f]
+                    if self.is_add_i2v_tag and 'i2v' in csv_f:
+                        csv_dict[aw] = csv_dict[aw].append(self.tag_dir + '/' + csv_f)
 
         self.sample_dir = []
         for aw in self.artwork_types:
@@ -63,7 +63,7 @@ class pokemonDataset(Dataset):
                 tagReader = csv.reader(f)
                 next(tagReader, None)
                 for row in tagReader:
-                    list_tag.append(row[4:])
+                    list_tag.append(row[3:])
             if self.is_add_i2v_tag:
                 with open(csv_dict[aw][1], 'r') as f:
                     tagReader = csv.reader(f)
@@ -77,7 +77,7 @@ class pokemonDataset(Dataset):
                 path_img = path_aug + '/' + aug
                 list_img = listdir(path_img)
 
-                for tag, img in zip(list_img, list_tag):
+                for img, tag in zip(list_img, list_tag):
                     path_img_spec = path_img + '/' + img
                     self.sample_dir.append([path_img_spec] + tag)
             

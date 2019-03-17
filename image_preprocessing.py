@@ -96,9 +96,9 @@ def get_i2v_tags_2csv(csv_dir, img_folder_dir, illust2vec, i2v_tag_dict, thresho
 # this is the main part of this script, we will do augmentation and tag the image in
 # the following work
 
-PATH_ORI = 'C:/Users/Leheng Chen/Desktop/HKUST/GAN/pokemon_dataset/images_newori'
+PATH_ORI = 'C:/Users/Leheng Chen/Desktop/HKUST/pokemon-GAN/pokemon_dataset/images_newori'
 ARTWORK = listdir(PATH_ORI)
-PATH_DATASET = 'C:/Users/Leheng Chen/Desktop/HKUST/GAN/pokemon_dataset/image'
+PATH_DATASET = 'C:/Users/Leheng Chen/Desktop/HKUST/pokemon-GAN/pokemon_dataset/image'
 
 ORI_TYPE = 'ori'
 AUGMENTATION_TYPE = ['flip', 'left rotation', 'right roration', 'contrast', 'saturation']
@@ -131,7 +131,7 @@ for aw in ARTWORK:
 # Now we first process the tags
 # To better looking the tags, we first list the tags by the order of the pokemon index(shown in the folder of origin image)
 
-PATH_TAG = 'pokemon_dataset/tags/'
+PATH_TAG = '../pokemon_dataset/tags/'
 
 for aw in ARTWORK:
     tag_dict = {}
