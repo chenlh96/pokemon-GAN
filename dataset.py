@@ -15,12 +15,13 @@ class ToTensor(object):
         # swap color axis because
         # numpy image: H x W x C
         # torch image: C X H X W
-        image = image.transpose((2, 0, 1))
+        image = np.transpose(image, (2, 0, 1))
+        print('reach')
         return {'image': torch.from_numpy(image),
-                'tags': torch.from_numpy(tags)}
+                'tags': tags}
 
 class pokemonDataset(Dataset):
-    def __init__(self, image_dir, tag_dir, artwork_types=None, is_add_i2v_tag=False):
+    def __init__(self, image_dir, tag_dir, artwork_types=None, is_add_i2v_tag=False, transform=None):
         self.image_dir = image_dir
         self.tag_dir = tag_dir
         self.artwork_types = None
@@ -31,6 +32,7 @@ class pokemonDataset(Dataset):
             self.artwork_types = artwork_types
         self.is_add_i2v_tag = is_add_i2v_tag
         self.sample_dir = None
+        self.transform = transform
 
         self.load_sample_dir()
 
@@ -41,7 +43,10 @@ class pokemonDataset(Dataset):
         sel_sample = self.sample_dir[idx]
         img = Image.open(sel_sample[0], 'r')
         img_2arr = np.asarray(img)
-        return {'image': img_2arr, 'tags': sel_sample[1:]}
+        sample = {'image': img_2arr, 'tags': sel_sample[1:]}
+        if self.transform:
+            sample = self.transform(sample)
+        return sample
 
 
     def load_sample_dir(self):
