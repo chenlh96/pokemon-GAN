@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import Func
 from torch.utils.data import DataLoader
 
 class generator(nn.Module):
@@ -66,24 +67,12 @@ class discriminator(nn.Module):
         x = self.lrelu4(self.batchnorm4(self.conv4(x)))
         x = self.lrelu5(self.batchnorm5(self.conv5(x)))
 
-
-
-def init_weight(layer):
-    if type(layer) == nn.ConvTranspose2d:
-        nn.init.normal_(layer.weight.data, mean=0, std=0.02)
-    elif type(layer) == nn.BatchNorm2d:
-        nn.init.normal_(layer.weight.data, mean=0, std=0.02)
-        nn.init.constant_(layer.bias.data, 0)
-
-def gen_noise(batch_size, dim):
-    return torch.randn(batch_size, dim)
-
-def train(epochs, batch_size, dim_noise, dataset, generator, discriminator, loss_gen, loss_dis, optimizer_gen, optimizer_dis):
+def train(epochs, batch_size, dim_noise, dataset, generator, discriminator, loss, optimizer_gen, optimizer_dis):
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
     for e in range(epochs):
         for i, data in enumerate(dataloader):
-            batch_noise = gen_noise(batch_size, dim_noise)
+            batch_noise = Func.gen_noise(batch_size, dim_noise)
             output_gen = generator(batch_noise)
 
             discriminator.zero_grad()
@@ -92,20 +81,20 @@ def train(epochs, batch_size, dim_noise, dataset, generator, discriminator, loss
             output_dis_real = discriminator(data).view(-1)
 
             real_label = torch.ones(batch_size)
-            loss_d = loss_dis(output_dis_real, real_label)
+            loss_d = loss(output_dis_real, real_label)
             loss_d.backword()
             ns_label = torch.zeros(batch_size)
-            loss_d = loss_dis(output_dis_ns, ns_label)
+            loss_d = loss(output_dis_ns, ns_label)
             loss_d.backword()
             optimizer_dis.step()
 
-            batch_noise = gen_noise(batch_size, dim_noise)
+            batch_noise = Func.gen_noise(batch_size, dim_noise)
             output_gen = generator(batch_noise)
             output_dis = discriminator(output_gen.detach()).view(-1)
 
             generator.zero_grad()
             ns_label = torch.zeros(batch_size)
-            loss_g = loss_gen(output_dis, ns_label)
+            loss_g = loss(output_dis, ns_label)
             loss_g.backword()
             optimizer_gen.step()
 
