@@ -114,7 +114,7 @@ for aw in ARTWORK:
         if not os.path.exists(path_folder):
             os.makedirs(path_folder)
 
-DIMENSION = 256
+DIMENSION = 128
 DEGREE_OF_ROTATE = 30
 CONTRAST = 5
 SATURATION = 2
@@ -133,20 +133,20 @@ for aw in ARTWORK:
 
 PATH_TAG = '../pokemon_dataset/tags/'
 
-for aw in ARTWORK:
-    tag_dict = {}
-    with open(PATH_TAG + 'pokemon_tag_' + aw + '.csv', 'r') as f:
-        tagReader = csv.reader(f)
-        for row in tagReader:
-            tag_dict[row[0]] = row
+# for aw in ARTWORK:
+#     tag_dict = {}
+#     with open(PATH_TAG + 'pokemon_tag_' + aw + '.csv', 'r') as f:
+#         tagReader = csv.reader(f)
+#         for row in tagReader:
+#             tag_dict[row[0]] = row
 
-    list_img_name = listdir(PATH_ORI + '/' + aw)
+#     list_img_name = listdir(PATH_ORI + '/' + aw)
     
-    with open(PATH_TAG + 'pokemon_tag_' + aw + '.csv', 'w', newline = '') as f:
-        tagWriter = csv.writer(f)
-        tagWriter.writerow(['filename', 'index', 'name', 'type1', 'type2', 'ability1', 'ability2', 'color'])
-        for name in list_img_name:
-            tagWriter.writerow(tag_dict[name[:-4]])
+#     with open(PATH_TAG + 'pokemon_tag_' + aw + '.csv', 'w', newline = '') as f:
+#         tagWriter = csv.writer(f)
+#         tagWriter.writerow(['filename', 'index', 'name', 'type1', 'type2', 'ability1', 'ability2', 'color'])
+#         for name in list_img_name:
+#             tagWriter.writerow(tag_dict[name[:-4]])
 
 
 TAGS = ['eyes', 'smile', 'chibi', 'mouth', 'tail']
