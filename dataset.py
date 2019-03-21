@@ -10,15 +10,25 @@ class ToTensor(object):
     """Convert ndarrays in sample to Tensors."""
 
     def __call__(self, sample):
-        image, tags = sample['image'], sample['tags']
+        image, tags = sample[0], sample[1]
 
         # swap color axis because
         # numpy image: H x W x C
         # torch image: C X H X W
         image = np.transpose(image, (2, 0, 1))
-        print('reach')
-        return {'image': torch.from_numpy(image),
-                'tags': tags}
+        return (torch.from_numpy(image), tags)
+
+class ToDoubleTensor(object):
+    """Convert ndarrays in sample to Tensors."""
+
+    def __call__(self, sample):
+        image, tags = sample[0], sample[1]
+
+        # swap color axis because
+        # numpy image: H x W x C
+        # torch image: C X H X W
+        image = np.transpose(image, (2, 0, 1)).astype(float)
+        return (torch.from_numpy(image).float(), tags)
 
 class pokemonDataset(Dataset):
     def __init__(self, image_dir, tag_dir, artwork_types=None, is_add_i2v_tag=False, transform=None):
@@ -43,7 +53,7 @@ class pokemonDataset(Dataset):
         sel_sample = self.sample_dir[idx]
         img = Image.open(sel_sample[0], 'r')
         img_2arr = np.asarray(img)
-        sample = {'image': img_2arr, 'tags': sel_sample[1:]}
+        sample = (img_2arr, sel_sample[1:])
         if self.transform:
             sample = self.transform(sample)
         return sample

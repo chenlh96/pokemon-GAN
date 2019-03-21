@@ -8,13 +8,13 @@ import torch.optim as optim
 import dataset
 import dcgan
 import Func
-from dataset import pokemonDataset, ToTensor
+from dataset import pokemonDataset, ToDoubleTensor
 from dcgan import generator, discriminator, train_base
 
-from importlib import reload
-reload(dataset)
-reload(dcgan)
-reload(Func)
+# from importlib import reload
+# reload(dataset)
+# reload(dcgan)
+# reload(Func)
 
 
 PATH_IMAGE = '../pokemon_dataset/image'
@@ -22,28 +22,37 @@ PATH_TAG = '../pokemon_dataset/tags'
 ARTWORK_TYPE = listdir(PATH_IMAGE)
 IS_ADD_I2V_TAG = False
 
-BATCH_SIZE = 126
+BATCH_SIZE = 32
 DIM_IMG = 128
 DIM_NOISE = 100
 
-STD_NOISE = 0.2
-LEARNING_RATE = 0.0002
+STD_WEIGHT = 0.2
+LEARNING_RATE = 0.1
 MOMENTUM = 0.5
-EPOCHS = 1000
+EPOCHS = 1
 
 def main():
-    dataset = pokemonDataset(PATH_IMAGE, PATH_TAG, ARTWORK_TYPE, IS_ADD_I2V_TAG, transform=ToTensor())
+    dataset = pokemonDataset(PATH_IMAGE, PATH_TAG, ARTWORK_TYPE, IS_ADD_I2V_TAG, transform=ToDoubleTensor())
 
-    net_gen = generator(DIM_NOISE, DIM_IMG)
-    net_dis = discriminator(DIM_IMG)
+    device = torch.device("cpu")
+
+    net_gen = generator(DIM_NOISE, DIM_IMG).to(device)
+    net_gen.apply(Func.init_weight)
+    print(net_gen)
+    net_dis = discriminator(DIM_IMG).to(device)
+    net_dis.apply(Func.init_weight)
+    print(net_dis)
 
     loss = nn.BCELoss()
-    optim_gen = optim.Adam(net_gen.parameters, LEARNING_RATE, MOMENTUM)
-    optim_dis = optim.Adam(net_dis.parameters, LEARNING_RATE, MOMENTUM)
+    optim_gen = optim.Adam(net_gen.parameters(), lr=LEARNING_RATE, betas=(MOMENTUM, 0.99))
+    optim_dis = optim.Adam(net_dis.parameters(), lr=LEARNING_RATE, betas=(MOMENTUM, 0.99))
 
-    train_base(EPOCHS, BATCH_SIZE, DIM_NOISE, dataset, net_gen, net_dis, loss, optim_gen, optim_dis)
+    print(net_gen.state_dict()['conv_trans_2d1.weight'][0])
+    net_gen, net_dis, _, _, = train_base(EPOCHS, BATCH_SIZE, DIM_NOISE, DIM_IMG, dataset, net_gen, net_dis, loss, optim_gen, optim_dis)
+    print(net_gen.state_dict()['conv_trans_2d1.weight'][0])
 
-if name == "__main__":
+
+if __name__ == "__main__":
     main()
 
 
