@@ -91,12 +91,12 @@ def init_weight(layer):
         nn.init.normal_(layer.weight.data, mean=1, std=0.2)
         nn.init.constant_(layer.bias.data, 0)
 
-def train_base(epochs, batch_size, dim_noise, dim_img, dataset, generator, discriminator, loss, optimizer_gen, optimizer_dis, filepath=None, filename='dcgan.pth'):
+def train_base(epochs, batch_size, dim_noise, dim_img, device, dataset, generator, discriminator, loss, optimizer_gen, optimizer_dis, filepath=None, filename='dcgan.pth'):
     # load the data
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
     # create the list to store each loss
     loss_list, score_list, img_list = [], [], []
-    fixed_noise = Func.gen_noise(batch_size, dim_noise)
+    fixed_noise = Func.gen_noise(batch_size, dim_noise).to(device)
     num_fixed_ns_img = 6
 
     # start iterating the epoch
@@ -110,7 +110,7 @@ def train_base(epochs, batch_size, dim_noise, dim_img, dataset, generator, discr
             # 1. Train the discriminator
             # ---------------------------
             # generate noise samples from the generator
-            batch_noise = Func.gen_noise(batch_size, dim_noise)
+            batch_noise = Func.gen_noise(batch_size, dim_noise).to(device)
             output_gen = generator(batch_noise)
             # check if the output size is legal
             assert output_gen.size() == torch.Size([batch_size, 3, dim_img, dim_img])
@@ -120,15 +120,16 @@ def train_base(epochs, batch_size, dim_noise, dim_img, dataset, generator, discr
             # calculate the loss of the noise samples, which assigns the same label 0
             # for all the samples, and get the single output(marks) from the discriminator
             output_dis_ns = discriminator(output_gen.detach()).view(-1) # use .detach() to stop the gradient pass the generator
-            ns_label = torch.zeros(batch_size)
+            ns_label = torch.zeros(batch_size).to(device)
             loss_d_real = loss(output_dis_ns, ns_label)
             loss_d_real.backward()
             optimizer_dis.step()
             
             # calculate the loss of the real samples and assigns label 1 to represent
             # all samples are true and get the single output(marks) from the discriminator
-            output_dis_real = discriminator(data[0]).view(-1)
-            real_label = torch.ones(batch_size)
+            read_data = data[0].to(device)
+            output_dis_real = discriminator(read_data).view(-1)
+            real_label = torch.ones(batch_size).to(device)
             loss_d_ns = loss(output_dis_real, real_label)
             loss_d_ns.backward()
             optimizer_dis.step()

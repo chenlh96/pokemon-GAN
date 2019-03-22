@@ -28,4 +28,5 @@ def load_checkpoint(epoch, generator, discriminator, path, filename):
     file_path = '{}/{}'.format(path, filename)
     checkpoint = torch.load(file_path)
     generator.load_state_dict(checkpoint['generator'])  
-    discriminator.load_state_dict(checkpoint['discriminator'])  
+    discriminator.load_state_dict(checkpoint['discriminator'])
+

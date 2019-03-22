@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torchvision import transforms
 
 import dataset
 import dcgan
@@ -32,7 +33,11 @@ MOMENTUM = 0.5
 EPOCHS = 1
 
 def main():
-    dataset = pokemonDataset(PATH_IMAGE, PATH_TAG, ARTWORK_TYPE, IS_ADD_I2V_TAG, transform=ToDoubleTensor())
+    transform=transforms.Compose([
+                       ToDoubleTensor(),
+                       transforms.Normalize((0.1307,), (0.3081,))
+                   ])
+    dataset = pokemonDataset(PATH_IMAGE, PATH_TAG, ARTWORK_TYPE, IS_ADD_I2V_TAG, transform=transform)
 
     device = torch.device("cpu")
 
@@ -47,7 +52,7 @@ def main():
     optim_gen = optim.Adam(net_gen.parameters(), lr=LEARNING_RATE, betas=(MOMENTUM, 0.99))
     optim_dis = optim.Adam(net_dis.parameters(), lr=LEARNING_RATE, betas=(MOMENTUM, 0.99))
 
-    net_gen, net_dis, losses, scores, imgs = train_base(EPOCHS, BATCH_SIZE, DIM_NOISE, DIM_IMG,
+    net_gen, net_dis, losses, scores, imgs = train_base(EPOCHS, BATCH_SIZE, DIM_NOISE, DIM_IMG, device,
                                                         dataset, net_gen, net_dis, loss, optim_gen, optim_dis, None, None)
 
 
