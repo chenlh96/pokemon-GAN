@@ -80,7 +80,6 @@ class discriminator(nn.Module):
         return x
 
 # todo: 
-# 1. add save function ***
 # 3. enable the function to put the tensor and the model to a fix device, like GPU ***
 
 def init_weight(layer):
@@ -92,7 +91,7 @@ def init_weight(layer):
         nn.init.normal_(layer.weight.data, mean=1, std=0.2)
         nn.init.constant_(layer.bias.data, 0)
 
-def train_base(epochs, batch_size, dim_noise, dim_img, dataset, generator, discriminator, loss, optimizer_gen, optimizer_dis, path=None):
+def train_base(epochs, batch_size, dim_noise, dim_img, dataset, generator, discriminator, loss, optimizer_gen, optimizer_dis, filepath=None, filename='dcgan.pth'):
     # load the data
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
     # create the list to store each loss
@@ -173,7 +172,7 @@ def train_base(epochs, batch_size, dim_noise, dim_img, dataset, generator, discr
                     img_epoch.append(generator(fixed_noise).detach())
                 img_list.append(img_epoch)
         
-        Func.save_checkpoint(e, generator, discriminator, path)
+        Func.save_checkpoint(e, generator, discriminator, filepath, filename)
 
     return generator, discriminator, loss_list, score_list, img_list
 

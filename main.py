@@ -47,7 +47,8 @@ def main():
     optim_gen = optim.Adam(net_gen.parameters(), lr=LEARNING_RATE, betas=(MOMENTUM, 0.99))
     optim_dis = optim.Adam(net_dis.parameters(), lr=LEARNING_RATE, betas=(MOMENTUM, 0.99))
 
-    net_gen, net_dis, losses, scores, imgs = train_base(EPOCHS, BATCH_SIZE, DIM_NOISE, DIM_IMG, dataset, net_gen, net_dis, loss, optim_gen, optim_dis, None)
+    net_gen, net_dis, losses, scores, imgs = train_base(EPOCHS, BATCH_SIZE, DIM_NOISE, DIM_IMG,
+                                                        dataset, net_gen, net_dis, loss, optim_gen, optim_dis, None, None)
 
 
 
