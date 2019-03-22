@@ -9,7 +9,7 @@ import dataset
 import dcgan
 import Func
 from dataset import pokemonDataset, ToDoubleTensor
-from dcgan import generator, discriminator, train_base
+from dcgan import generator, discriminator, train_base, init_weight
 
 # from importlib import reload
 # reload(dataset)
@@ -37,19 +37,18 @@ def main():
     device = torch.device("cpu")
 
     net_gen = generator(DIM_NOISE, DIM_IMG).to(device)
-    net_gen.apply(Func.init_weight)
+    net_gen.apply(init_weight)
     print(net_gen)
     net_dis = discriminator(DIM_IMG).to(device)
-    net_dis.apply(Func.init_weight)
+    net_dis.apply(init_weight)
     print(net_dis)
 
     loss = nn.BCELoss()
     optim_gen = optim.Adam(net_gen.parameters(), lr=LEARNING_RATE, betas=(MOMENTUM, 0.99))
     optim_dis = optim.Adam(net_dis.parameters(), lr=LEARNING_RATE, betas=(MOMENTUM, 0.99))
 
-    print(net_gen.state_dict()['conv_trans_2d1.weight'][0])
-    net_gen, net_dis, _, _, = train_base(EPOCHS, BATCH_SIZE, DIM_NOISE, DIM_IMG, dataset, net_gen, net_dis, loss, optim_gen, optim_dis)
-    print(net_gen.state_dict()['conv_trans_2d1.weight'][0])
+    net_gen, net_dis, losses, scores, imgs = train_base(EPOCHS, BATCH_SIZE, DIM_NOISE, DIM_IMG, dataset, net_gen, net_dis, loss, optim_gen, optim_dis, None)
+
 
 
 if __name__ == "__main__":

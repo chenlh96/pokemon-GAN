@@ -6,18 +6,6 @@ import csv
 from PIL import Image
 import numpy as np
 
-class ToTensor(object):
-    """Convert ndarrays in sample to Tensors."""
-
-    def __call__(self, sample):
-        image, tags = sample[0], sample[1]
-
-        # swap color axis because
-        # numpy image: H x W x C
-        # torch image: C X H X W
-        image = np.transpose(image, (2, 0, 1))
-        return (torch.from_numpy(image), tags)
-
 class ToDoubleTensor(object):
     """Convert ndarrays in sample to Tensors."""
 

@@ -79,48 +79,101 @@ class discriminator(nn.Module):
         x = self.sig(self.conv6(x))
         return x
 
-def train_base(epochs, batch_size, dim_noise, dim_img, dataset, generator, discriminator, loss, optimizer_gen, optimizer_dis):
+# todo: 
+# 1. add save function ***
+# 3. enable the function to put the tensor and the model to a fix device, like GPU ***
+
+def init_weight(layer):
+    if type(layer) == nn.ConvTranspose2d:
+        nn.init.normal_(layer.weight.data, mean=0, std=0.2)
+    elif type(layer) == nn.Conv2d:
+        nn.init.normal_(layer.weight.data, mean=0, std=0.2)
+    elif type(layer) == nn.BatchNorm2d:
+        nn.init.normal_(layer.weight.data, mean=1, std=0.2)
+        nn.init.constant_(layer.bias.data, 0)
+
+def train_base(epochs, batch_size, dim_noise, dim_img, dataset, generator, discriminator, loss, optimizer_gen, optimizer_dis, path=None):
+    # load the data
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+    # create the list to store each loss
+    loss_list, score_list, img_list = [], [], []
+    fixed_noise = Func.gen_noise(batch_size, dim_noise)
+    num_fixed_ns_img = 6
 
-    loss_gen, loss_dic = 0, 0
-
-
+    # start iterating the epoch
     for e in range(epochs):
+        # iterating the mini-bathc
+        loss_d_epoch, loss_g_epoch = 0,0
+        score_ns_epoch, score_real_epoch = 0, 0
+        img_epoch = []
         for i, data in enumerate(dataloader):
+            # ---------------------------
+            # 1. Train the discriminator
+            # ---------------------------
+            # generate noise samples from the generator
             batch_noise = Func.gen_noise(batch_size, dim_noise)
             output_gen = generator(batch_noise)
-
+            # check if the output size is legal
             assert output_gen.size() == torch.Size([batch_size, 3, dim_img, dim_img])
 
+            # start to train the discriminator
             discriminator.zero_grad()
-            output_dis_ns = discriminator(output_gen.detach()).view(-1)
-            output_dis_real = discriminator(data[0]).view(-1)
-
-            real_label = torch.ones(batch_size)
-            loss_d = loss(output_dis_real, real_label)
-            loss_d.backward()
-            
+            # calculate the loss of the noise samples, which assigns the same label 0
+            # for all the samples, and get the single output(marks) from the discriminator
+            output_dis_ns = discriminator(output_gen.detach()).view(-1) # use .detach() to stop the gradient pass the generator
             ns_label = torch.zeros(batch_size)
-            loss_d = loss(output_dis_ns, ns_label)
-            loss_d.backward()
+            loss_d_real = loss(output_dis_ns, ns_label)
+            loss_d_real.backward()
+            optimizer_dis.step()
+            
+            # calculate the loss of the real samples and assigns label 1 to represent
+            # all samples are true and get the single output(marks) from the discriminator
+            output_dis_real = discriminator(data[0]).view(-1)
+            real_label = torch.ones(batch_size)
+            loss_d_ns = loss(output_dis_real, real_label)
+            loss_d_ns.backward()
             optimizer_dis.step()
 
-            batch_noise = Func.gen_noise(batch_size, dim_noise)
-            output_gen = generator(batch_noise)
+            # ---------------------------
+            # 1. Train the generator
+            # ---------------------------
+            # Feed the noise samplea to the discriminator agian to geit the accurate scores
+            # after training the discriminator, and assign label 1 not to see the noise as
+            # real label but to let the loss function to be correct and do correct back propogation
+            generator.zero_grad()            
+            # batch_noise = Func.gen_noise(batch_size, dim_noise)
+            # output_gen = generator(batch_noise)
             output_dis = discriminator(output_gen).view(-1)
-
-            # todo: find out the problem that the params of gen cannot update. The reason might be:
-            # 1. the grad cannot pass to param of gen;
-            # 2. the loss becomes 0
-
-            generator.zero_grad()
             ns_label = torch.ones(batch_size)
             loss_g = loss(output_dis, ns_label)
-            print(loss_g)
             loss_g.backward()
             optimizer_gen.step()
 
-            break
+            # calculate the loss and store it
+            loss_d_epoch = loss_d_ns.item() + loss_d_real.item()
+            loss_g_epoch = loss_g.item()
+            # store the final score of the current epoch using the trained D of last epoch
+            score_ns_epoch = output_dis_ns.mean().item()
+            score_real_epoch = output_dis_real.mean().item()
 
-    return generator, discriminator, loss_gen, loss_dic
+            # print information to the console
+            if (i + 1) % 4000 == 0:
+                print('epoch: %d, iter: %d, loss_D: %.4f, loss_G: %.4f'
+                        % (e, (i + 1), loss_d_epoch, loss_g_epoch))
+                print('train D: D(x): %.4f, D(G(z)): %.4f train G: D(G(z))： %.4f'
+                        % (output_dis_real.mean().item(), output_dis_ns.mean().item(), output_dis.mean().item()))            
+                
+                # store the final loss for D and G for a specific time interval of a whole epoch
+                loss_list.append([loss_d_epoch, loss_g_epoch])
+                # store the final score from D for noise and real samples for a specific time imterval on current epoch
+                score_list.append([score_ns_epoch, score_real_epoch])
+                # store the image that the generator create
+                img_epoch = []
+                for _ in range(num_fixed_ns_img):
+                    img_epoch.append(generator(fixed_noise).detach())
+                img_list.append(img_epoch)
+        
+        Func.save_checkpoint(e, generator, discriminator, path)
+
+    return generator, discriminator, loss_list, score_list, img_list
 
