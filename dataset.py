@@ -18,6 +18,16 @@ class ToDoubleTensor(object):
         image = np.transpose(image, (2, 0, 1)).astype(float)
         return (torch.from_numpy(image).float(), tags)
 
+class Normalize(object):
+    def __init__(self, mean, std):
+        self.mean = mean
+        self.std = std
+
+    def __call__(self, sample):
+        image, tags = sample[0], sample[1]
+        # to do the normalize here
+        return (torch.from_numpy(image).float(), tags)
+
 class pokemonDataset(Dataset):
     def __init__(self, image_dir, tag_dir, artwork_types=None, is_add_i2v_tag=False, transform=None):
         self.image_dir = image_dir
@@ -38,14 +48,17 @@ class pokemonDataset(Dataset):
         return len(self.sample_dir)
 
     def __getitem__(self, idx):
-        sel_sample = self.sample_dir[idx]
-        img = Image.open(sel_sample[0], 'r')
-        img_2arr = np.asarray(img)
-        sample = (img_2arr, sel_sample[1:])
+        img_2arr = self.get_img(idx)
+        sample = (img_2arr, self.sample_dir[idx][1:])
         if self.transform:
             sample = self.transform(sample)
         return sample
 
+    def get_img(self, idx):
+        sel_sample = self.sample_dir[idx]
+        with Image.open(sel_sample[0], 'r') as img:
+            img_2arr = np.asarray(img)
+        return img_2arr
 
     def load_sample_dir(self):
         list_csv = listdir(self.tag_dir)
@@ -83,7 +96,22 @@ class pokemonDataset(Dataset):
                 for img, tag in zip(list_img, list_tag):
                     path_img_spec = path_img + '/' + img
                     self.sample_dir.append([path_img_spec] + tag)
-            
+
+    def get_channel_mean_std(self, dim_img):
+        mean = np.empty(3)
+        std = np.empty(3)
+        for i in range(len(self.sample_dir)):
+            img = self.get_img(i)
+            for j in range(3):
+                mean[j] += np.sum(img[:,:, j], axis=0)
+        mean /= dim_img ** 2 * len(self.sample_dir)
+        
+        for i in range(len(self.sample_dir)):
+            img = self.get_img(i)
+            for j in range(3):
+                std[j] += np.sum((img[:,:, j] - mean[j])** 2, axis=0)
+        std /= dim_img ** 2 * len(self.sample_dir)
+        return mean, std      
 
     def add_i2v_tag(self):
         pass

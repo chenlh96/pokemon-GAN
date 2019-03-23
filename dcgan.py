@@ -47,6 +47,7 @@ class discriminator(nn.Module):
 
     def __init__(self, dim_input_img=64):
         super(discriminator, self).__init__()
+        self.dim_input_img = dim_input_img
         self.conv1 = nn.Conv2d(3, dim_input_img * 2, 5, 2, 2, bias=False)
         self.batchnorm1 = nn.BatchNorm2d(dim_input_img * 2)
         self.lrelu1 = nn.LeakyReLU(negative_slope=0.2)
@@ -96,15 +97,16 @@ def train_base(epochs, batch_size, dim_noise, dim_img, device, dataset, generato
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
     # create the list to store each loss
     loss_list, score_list, img_list = [], [], []
-    fixed_noise = Func.gen_noise(batch_size, dim_noise).to(device)
     num_fixed_ns_img = 6
+    fixed_noise = Func.gen_noise(num_fixed_ns_img, dim_noise).to(device)
 
     # start iterating the epoch
     for e in range(epochs):
         # iterating the mini-bathc
         loss_d_epoch, loss_g_epoch = 0,0
-        score_ns_epoch, score_real_epoch = 0, 0
+        score_ns_epoch, score_real_epoch, score_dis_epoch = 0, 0, 0
         img_epoch = []
+
         for i, data in enumerate(dataloader):
             # ---------------------------
             # 1. Train the discriminator
@@ -155,25 +157,28 @@ def train_base(epochs, batch_size, dim_noise, dim_img, device, dataset, generato
             # store the final score of the current epoch using the trained D of last epoch
             score_ns_epoch = output_dis_ns.mean().item()
             score_real_epoch = output_dis_real.mean().item()
+            score_dis_epoch = output_dis.mean().item()
+
 
             # print information to the console
-            if (i + 1) % 4000 == 0:
+            if (i + 1) % 10 == 0:
                 print('epoch: %d, iter: %d, loss_D: %.4f, loss_G: %.4f'
                         % (e, (i + 1), loss_d_epoch, loss_g_epoch))
                 print('train D: D(x): %.4f, D(G(z)): %.4f train G: D(G(z))： %.4f'
-                        % (output_dis_real.mean().item(), output_dis_ns.mean().item(), output_dis.mean().item()))            
+                        % (score_real_epoch, score_ns_epoch, score_dis_epoch))            
                 
                 # store the final loss for D and G for a specific time interval of a whole epoch
                 loss_list.append([loss_d_epoch, loss_g_epoch])
                 # store the final score from D for noise and real samples for a specific time imterval on current epoch
-                score_list.append([score_ns_epoch, score_real_epoch])
+                score_list.append([score_ns_epoch, score_real_epoch, score_dis_epoch])
                 # store the image that the generator create
                 img_epoch = []
-                for _ in range(num_fixed_ns_img):
-                    img_epoch.append(generator(fixed_noise).detach())
+                test_img = generator(fixed_noise).detach()
+                img_epoch.append(test_img.numpy())
                 img_list.append(img_epoch)
         
-        Func.save_checkpoint(e, generator, discriminator, filepath, filename)
+                Func.save_checkpoint(e, generator, discriminator, filepath, filename)
+                break
 
     return generator, discriminator, loss_list, score_list, img_list
 
