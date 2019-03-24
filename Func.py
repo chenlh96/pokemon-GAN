@@ -11,8 +11,8 @@ def show_weights(m):
         print(m.weights.data)
 
 def save_checkpoint(epoch, generator, discriminator, path, filename):
-    if filename == None or path == None:
-        return
+    assert filename != None and path != None
+    assert 'pt' in filename
     len_ext = 2
     ext = '.pt'
     if 'pth' in filename:
@@ -23,8 +23,7 @@ def save_checkpoint(epoch, generator, discriminator, path, filename):
     torch.save({'generator': generator.state_dict(), 'discriminator': discriminator.state_dict()}, file_path)
 
 def load_checkpoint(epoch, generator, discriminator, path, filename):
-    if filename == None or path == None:
-        return
+    assert filename != None and path != None
     file_path = '{}/{}'.format(path, filename)
     checkpoint = torch.load(file_path)
     generator.load_state_dict(checkpoint['generator'])  

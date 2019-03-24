@@ -1,5 +1,6 @@
 import torch
 from torch.utils.data import Dataset
+from torchvision import transforms
 from os import listdir
 import os
 import csv
@@ -25,8 +26,15 @@ class Normalize(object):
 
     def __call__(self, sample):
         image, tags = sample[0], sample[1]
+
+        assert type(image) == torch.Tensor
+
+        new_img = torch.full(image.size(), 0)
         # to do the normalize here
-        return (torch.from_numpy(image).float(), tags)
+        for i in range(3):
+            # it may be a tensor from torch, or a n-dim array form numpy
+            new_img[i,:,:] = (image[i,:,:] - self.mean[i]) / (self.std[i] + 1)      
+        return (new_img, tags)
 
 class pokemonDataset(Dataset):
     def __init__(self, image_dir, tag_dir, artwork_types=None, is_add_i2v_tag=False, transform=None):
@@ -53,6 +61,15 @@ class pokemonDataset(Dataset):
         if self.transform:
             sample = self.transform(sample)
         return sample
+    
+    def set_transform(self, transform):
+        if self.transform == None:
+            self.transform = transform
+        else:
+            # todo: to check if the compose can accept a compose object as arg
+            self.transform = transforms.Compose([
+                        self.transform,
+                        transform])
 
     def get_img(self, idx):
         sel_sample = self.sample_dir[idx]
@@ -103,13 +120,13 @@ class pokemonDataset(Dataset):
         for i in range(len(self.sample_dir)):
             img = self.get_img(i)
             for j in range(3):
-                mean[j] += np.sum(img[:,:, j], axis=0)
+                mean[j] += np.sum(img[:,:, j])
         mean /= dim_img ** 2 * len(self.sample_dir)
         
         for i in range(len(self.sample_dir)):
             img = self.get_img(i)
             for j in range(3):
-                std[j] += np.sum((img[:,:, j] - mean[j])** 2, axis=0)
+                std[j] += np.sum((img[:,:, j] - mean[j])** 2)
         std /= dim_img ** 2 * len(self.sample_dir)
         return mean, std      
 

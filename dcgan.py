@@ -131,13 +131,13 @@ def train_base(epochs, batch_size, dim_noise, dim_img, device, dataset, generato
             # all samples are true and get the single output(marks) from the discriminator
             read_data = data[0].to(device)
             output_dis_real = discriminator(read_data).view(-1)
-            real_label = torch.ones(batch_size).to(device)
+            real_label = torch.ones(batch_size, device=device)
             loss_d_ns = loss(output_dis_real, real_label)
             loss_d_ns.backward()
             optimizer_dis.step()
 
             # ---------------------------
-            # 1. Train the generator
+            # 2. Train the generator
             # ---------------------------
             # Feed the noise samplea to the discriminator agian to geit the accurate scores
             # after training the discriminator, and assign label 1 not to see the noise as
@@ -146,7 +146,7 @@ def train_base(epochs, batch_size, dim_noise, dim_img, device, dataset, generato
             # batch_noise = Func.gen_noise(batch_size, dim_noise)
             # output_gen = generator(batch_noise)
             output_dis = discriminator(output_gen).view(-1)
-            ns_label = torch.ones(batch_size)
+            ns_label = torch.ones(batch_size, device=device)
             loss_g = loss(output_dis, ns_label)
             loss_g.backward()
             optimizer_gen.step()
@@ -161,7 +161,7 @@ def train_base(epochs, batch_size, dim_noise, dim_img, device, dataset, generato
 
 
             # print information to the console
-            if (i + 1) % 10 == 0:
+            if (i + 1) % 2 == 0:
                 print('epoch: %d, iter: %d, loss_D: %.4f, loss_G: %.4f'
                         % (e, (i + 1), loss_d_epoch, loss_g_epoch))
                 print('train D: D(x): %.4f, D(G(z)): %.4f train G: D(G(z))： %.4f'
@@ -177,8 +177,7 @@ def train_base(epochs, batch_size, dim_noise, dim_img, device, dataset, generato
                 img_epoch.append(test_img.numpy())
                 img_list.append(img_epoch)
         
-                Func.save_checkpoint(e, generator, discriminator, filepath, filename)
-                break
-
+        Func.save_checkpoint(e, generator, discriminator, filepath, filename)
+        
     return generator, discriminator, loss_list, score_list, img_list
 
