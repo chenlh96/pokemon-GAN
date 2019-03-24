@@ -8,17 +8,9 @@ import torch.optim as optim
 from torchvision import transforms
 import matplotlib.pyplot as plt
 
-import dataset
-import dcgan
 import Func
 from dataset import pokemonDataset, ToDoubleTensor, Normalize
 from dcgan import generator, discriminator, train_base, init_weight
-
-# from importlib import reload
-# reload(dataset)
-# reload(dcgan)
-# reload(Func)
-
 
 PATH_IMAGE = '../pokemon_dataset/image'
 PATH_TAG = '../pokemon_dataset/tags'
@@ -28,10 +20,9 @@ if not os.path.exists(PATH_MODEL):
     os.makedirs(PATH_MODEL)
 IS_ADD_I2V_TAG = False
 
-BATCH_SIZE = 5
+BATCH_SIZE = 16
 DIM_IMG = 128
 DIM_NOISE = 100
-
 LEARNING_RATE = 0.0002
 MOMENTUM = 0.5
 EPOCHS = 1
@@ -43,12 +34,6 @@ def main():
     std = [5155.03683635, 5423.40093651, 6120.33667355]
     transform=transforms.Compose([ToDoubleTensor(), Normalize(mean, std)])
     dataset.set_transform(transform)
-    # sample = dataset[0][0].numpy()
-    # img = np.transpose(sample, (1,2,0)).astype(int)
-    # plt.figure()
-    # plt.imshow(img)
-    # plt.show()
-
 
     device = torch.device("cpu")
 
@@ -63,8 +48,17 @@ def main():
     optim_gen = optim.Adam(net_gen.parameters(), lr=LEARNING_RATE, betas=(MOMENTUM, 0.99))
     optim_dis = optim.Adam(net_dis.parameters(), lr=LEARNING_RATE, betas=(MOMENTUM, 0.99))
 
-    net_gen, net_dis, _, _, _ = train_base(EPOCHS, BATCH_SIZE, DIM_NOISE, DIM_IMG, device,
+    net_gen, net_dis, loss_gen, loss_dis, _ = train_base(EPOCHS, BATCH_SIZE, DIM_NOISE, DIM_IMG, device,
                                                         dataset, net_gen, net_dis, loss, optim_gen, optim_dis, PATH_MODEL)
+
+    plt.figure(figsize=(20, 10))
+    plt.plot(loss_gen, label = 'generator')
+    plt.plot(loss_dis, label = 'discriminator')
+    plt.title('Loss of training the gennerator and discriminator')
+    plt.xlabel('loss')
+    plt.ylabel('process')
+    plt.legend()
+    plt.show()
 
 
 if __name__ == "__main__":

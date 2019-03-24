@@ -94,7 +94,8 @@ def init_weight(layer):
 
 def train_base(epochs, batch_size, dim_noise, dim_img, device, dataset, generator, discriminator, loss, optimizer_gen, optimizer_dis, filepath=None, filename='dcgan.pth'):
     # load the data
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+    worker = 2
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=worker)
     # create the list to store each loss
     loss_list, score_list, img_list = [], [], []
     num_fixed_ns_img = 6
@@ -174,7 +175,7 @@ def train_base(epochs, batch_size, dim_noise, dim_img, device, dataset, generato
                 # store the image that the generator create
                 img_epoch = []
                 test_img = generator(fixed_noise).detach()
-                img_epoch.append(test_img.numpy())
+                img_epoch.append(test_img.cpu().numpy())
                 img_list.append(img_epoch)
         
         Func.save_checkpoint(e, generator, discriminator, filepath, filename)

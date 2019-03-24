@@ -4,12 +4,6 @@ import torch.nn as nn
 def gen_noise(batch_size, dim):
     return torch.randn(batch_size, dim, 1, 1)
 
-def show_weights(m):
-    # if type(m) == nn.ConvTranspose2d:
-    #     print(m.weights.data)
-    if type(m) == nn.Conv2d:
-        print(m.weights.data)
-
 def save_checkpoint(epoch, generator, discriminator, path, filename):
     assert filename != None and path != None
     assert 'pt' in filename
@@ -28,4 +22,8 @@ def load_checkpoint(epoch, generator, discriminator, path, filename):
     checkpoint = torch.load(file_path)
     generator.load_state_dict(checkpoint['generator'])  
     discriminator.load_state_dict(checkpoint['discriminator'])
+
+def make_figure_grid_fr_tensor(img_tensor, grid_size):
+    assert type(img_tensor) == torch.Tensor
+    pass
 
