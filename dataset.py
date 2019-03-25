@@ -7,6 +7,27 @@ import csv
 from PIL import Image
 import numpy as np
 
+def get_channel_mean_std(dataset, dim_img):
+    mean = np.empty(3)
+    std = np.empty(3)
+    for i in range(len(dataset)):
+        img = dataset[i][0]
+        if type(img) == torch.Tensor:
+            img = np.transpose(img.numpy(), (1,2,0))
+        for j in range(3):
+            mean[j] += np.sum(img[:,:, j])
+    mean /= dim_img ** 2 * len(dataset)
+    
+    for i in range(len(dataset)):
+        img = dataset[i][0]
+        if type(img) == torch.Tensor:
+            img = np.transpose(img.numpy(), (1,2,0))
+        for j in range(3):
+            std[j] += np.sum((img[:,:, j] - mean[j])** 2)
+    std /= dim_img ** 2 * len(dataset)
+    std = np.sqrt(std)
+    return mean, std   
+
 class ToDoubleTensor(object):
     """Convert ndarrays in sample to Tensors."""
 
@@ -56,8 +77,10 @@ class pokemonDataset(Dataset):
         return len(self.sample_dir)
 
     def __getitem__(self, idx):
-        img_2arr = self.get_img(idx)
-        sample = (img_2arr, self.sample_dir[idx][1:])
+        sel_sample = self.sample_dir[idx]
+        with Image.open(sel_sample[0], 'r') as img:
+            img_2arr = np.asarray(img)
+        sample = (img_2arr, sel_sample[1:])
         if self.transform:
             sample = self.transform(sample)
         return sample
@@ -70,12 +93,6 @@ class pokemonDataset(Dataset):
             self.transform = transforms.Compose([
                         self.transform,
                         transform])
-
-    def get_img(self, idx):
-        sel_sample = self.sample_dir[idx]
-        with Image.open(sel_sample[0], 'r') as img:
-            img_2arr = np.asarray(img)
-        return img_2arr
 
     def load_sample_dir(self):
         list_csv = listdir(self.tag_dir)
@@ -112,23 +129,7 @@ class pokemonDataset(Dataset):
 
                 for img, tag in zip(list_img, list_tag):
                     path_img_spec = path_img + '/' + img
-                    self.sample_dir.append([path_img_spec] + tag)
-
-    def get_channel_mean_std(self, dim_img):
-        mean = np.empty(3)
-        std = np.empty(3)
-        for i in range(len(self.sample_dir)):
-            img = self.get_img(i)
-            for j in range(3):
-                mean[j] += np.sum(img[:,:, j])
-        mean /= dim_img ** 2 * len(self.sample_dir)
-        
-        for i in range(len(self.sample_dir)):
-            img = self.get_img(i)
-            for j in range(3):
-                std[j] += np.sum((img[:,:, j] - mean[j])** 2)
-        std /= dim_img ** 2 * len(self.sample_dir)
-        return mean, std      
+                    self.sample_dir.append([path_img_spec] + tag)   
 
     def add_i2v_tag(self):
         pass

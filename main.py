@@ -9,7 +9,7 @@ from torchvision import transforms
 import matplotlib.pyplot as plt
 
 import Func
-from dataset import pokemonDataset, ToDoubleTensor, Normalize
+from dataset import pokemonDataset, ToDoubleTensor, Normalize, get_channel_mean_std
 from dcgan import generator, discriminator, train_base, init_weight
 
 PATH_IMAGE = '../pokemon_dataset/image'
@@ -20,7 +20,7 @@ if not os.path.exists(PATH_MODEL):
     os.makedirs(PATH_MODEL)
 IS_ADD_I2V_TAG = False
 
-BATCH_SIZE = 16
+BATCH_SIZE = 5
 DIM_IMG = 128
 DIM_NOISE = 100
 LEARNING_RATE = 0.0002
@@ -30,10 +30,17 @@ EPOCHS = 1
 def main():
     dataset = pokemonDataset(PATH_IMAGE, PATH_TAG, ARTWORK_TYPE, IS_ADD_I2V_TAG)
     # mean, std = dataset.get_channel_mean_std(DIM_IMG)
+    mean, std = get_channel_mean_std(dataset, DIM_IMG)
+    print(mean)
+    print(std)
     mean = [220.43362509, 217.50907014, 212.78514176]
-    std = [5155.03683635, 5423.40093651, 6120.33667355]
+    std = [71.7985852,  73.64374336, 78.23258064]
+
     transform=transforms.Compose([ToDoubleTensor(), Normalize(mean, std)])
     dataset.set_transform(transform)
+    mean, std = get_channel_mean_std(dataset, DIM_IMG)
+    print(mean)
+    print(std)
 
     device = torch.device("cpu")
 
@@ -51,14 +58,14 @@ def main():
     net_gen, net_dis, loss_gen, loss_dis, _ = train_base(EPOCHS, BATCH_SIZE, DIM_NOISE, DIM_IMG, device,
                                                         dataset, net_gen, net_dis, loss, optim_gen, optim_dis, PATH_MODEL)
 
-    plt.figure(figsize=(20, 10))
-    plt.plot(loss_gen, label = 'generator')
-    plt.plot(loss_dis, label = 'discriminator')
-    plt.title('Loss of training the gennerator and discriminator')
-    plt.xlabel('loss')
-    plt.ylabel('process')
-    plt.legend()
-    plt.show()
+    # plt.figure(figsize=(20, 10))
+    # plt.plot(loss_gen, label = 'generator')
+    # plt.plot(loss_dis, label = 'discriminator')
+    # plt.title('Loss of training the gennerator and discriminator')
+    # plt.xlabel('loss')
+    # plt.ylabel('process')
+    # plt.legend()
+    # plt.show()
 
 
 if __name__ == "__main__":
