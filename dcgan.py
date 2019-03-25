@@ -31,7 +31,6 @@ class generator(nn.Module):
         self.relu5 = nn.ReLU(inplace=self.inplace)
 
         self.conv_trans_2d6 = nn.ConvTranspose2d(dim_output_img*2, 3, 4,2,1, bias=False)
-        self.batchnorm6 = nn.BatchNorm2d(3)
         self.tanh = nn.Tanh()
 
     def forward(self, x):
@@ -40,7 +39,7 @@ class generator(nn.Module):
         x = self.relu3(self.batchnorm3(self.conv_trans_2d3(x)))
         x = self.relu4(self.batchnorm4(self.conv_trans_2d4(x)))
         x = self.relu5(self.batchnorm5(self.conv_trans_2d5(x)))
-        x = self.tanh(self.batchnorm6(self.conv_trans_2d6(x)))
+        x = self.tanh(self.conv_trans_2d6(x))
         return x
 
 
@@ -96,14 +95,14 @@ def init_weight(layer):
         nn.init.normal_(layer.weight.data, mean=1, std=std)
         nn.init.constant_(layer.bias.data, 0)
 
-def train_base(epochs, batch_size, dim_noise, dim_img, device, dataset, generator, discriminator, loss, optimizer_gen, optimizer_dis, filepath=None, filename='dcgan.pth'):
+def train_base(epochs, batch_size, dim_noise, dim_img, device, dataset, generator, discriminator, loss, optimizer_gen, optimizer_dis, filepath=None, filename='dcgan_epoch.pth'):
     # load the data
     worker = 2
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=worker)
     # create the list to store each loss
     loss_list, score_list, img_list = [], [], []
     num_fixed_ns_img = 6
-    fixed_noise = Func.gen_noise(num_fixed_ns_img, dim_noise).to(device)
+    fixed_noise = torch.randn(num_fixed_ns_img, dim_noise, 1, 1, device=device)
 
     # start iterating the epoch
     for e in range(epochs):
@@ -120,7 +119,7 @@ def train_base(epochs, batch_size, dim_noise, dim_img, device, dataset, generato
             # 1. Train the discriminator
             # ---------------------------
             # generate noise samples from the generator
-            batch_noise = Func.gen_noise(b_size, dim_noise).to(device)
+            batch_noise = torch.randn(b_size, dim_noise, 1, 1, device=device)
             output_gen = generator(batch_noise)
             # check if the output size is legal
             assert output_gen.size() == torch.Size([b_size, 3, dim_img, dim_img])
@@ -151,7 +150,7 @@ def train_base(epochs, batch_size, dim_noise, dim_img, device, dataset, generato
             # after training the discriminator, and assign label 1 not to see the noise as
             # real label but to let the loss function to be correct and do correct back propogation
             generator.zero_grad()            
-            # batch_noise = Func.gen_noise(b_size, dim_noise)
+            # batch_noise = Func.torch.randn(b_size, dim_noise)
             # output_gen = generator(batch_noise)
             output_dis = discriminator(output_gen).view(-1)
             loss_g = loss(output_dis, label)
