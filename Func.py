@@ -20,6 +20,7 @@ def load_checkpoint(epoch, generator, discriminator, path, filename):
     checkpoint = torch.load(file_path)
     generator.load_state_dict(checkpoint['generator'])  
     discriminator.load_state_dict(checkpoint['discriminator'])
+    return generator, discriminator
 
 def make_figure_grid_fr_tensor(img_tensor, grid_size):
     assert type(img_tensor) == torch.Tensor

@@ -6,7 +6,6 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torchvision import transforms
-import matplotlib.pyplot as plt
 
 import Func
 from dataset import pokemonDataset, ToDoubleTensor, Normalize, get_channel_mean_std
@@ -20,52 +19,52 @@ if not os.path.exists(PATH_MODEL):
     os.makedirs(PATH_MODEL)
 IS_ADD_I2V_TAG = False
 
-BATCH_SIZE = 5
-DIM_IMG = 128
+BATCH_SIZE = 32
+DIM_IMG = 64
 DIM_NOISE = 100
 LEARNING_RATE = 0.0002
 MOMENTUM = 0.5
 EPOCHS = 1
+INIT = True
+DEVICE = torch.device("cpu")
 
 def main():
+
     dataset = pokemonDataset(PATH_IMAGE, PATH_TAG, ARTWORK_TYPE, IS_ADD_I2V_TAG)
-    # mean, std = dataset.get_channel_mean_std(DIM_IMG)
-    mean, std = get_channel_mean_std(dataset, DIM_IMG)
-    print(mean)
-    print(std)
-    mean = [220.43362509, 217.50907014, 212.78514176]
-    std = [71.7985852,  73.64374336, 78.23258064]
 
-    transform=transforms.Compose([ToDoubleTensor(), Normalize(mean, std)])
+    # mean, std = get_channel_mean_std(dataset, DIM_IMG)
+    # mean = [220.43362509, 217.50907014, 212.78514176]
+    # std = [71.7985852,  73.64374336, 78.23258064]
+
+    transform=transforms.Compose([ToDoubleTensor(), Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])])
     dataset.set_transform(transform)
-    mean, std = get_channel_mean_std(dataset, DIM_IMG)
-    print(mean)
-    print(std)
 
-    device = torch.device("cpu")
+    net_gen = generator(DIM_NOISE, DIM_IMG).to(DEVICE)
+    net_dis = discriminator(DIM_IMG).to(DEVICE)
+    print(net_gen)
+    print(net_dis)
 
-    net_gen = generator(DIM_NOISE, DIM_IMG).to(device)
-    net_gen.apply(init_weight)
-    # print(net_gen)
-    net_dis = discriminator(DIM_IMG).to(device)
-    net_dis.apply(init_weight)
-    # print(net_dis)
-
+    if INIT:
+        net_gen.apply(init_weight)
+        net_dis.apply(init_weight)
+    else:
+        net_gen, net_dis = Func.load_checkpoint(EPOCHS, net_gen, net_dis, PATH_MODEL, 'dcgan_epoch_%d.pth' % EPOCHS)
+    
     loss = nn.BCELoss()
     optim_gen = optim.Adam(net_gen.parameters(), lr=LEARNING_RATE, betas=(MOMENTUM, 0.99))
     optim_dis = optim.Adam(net_dis.parameters(), lr=LEARNING_RATE, betas=(MOMENTUM, 0.99))
 
-    net_gen, net_dis, loss_gen, loss_dis, _ = train_base(EPOCHS, BATCH_SIZE, DIM_NOISE, DIM_IMG, device,
+    net_gen, net_dis, losses, _, _ = train_base(EPOCHS, BATCH_SIZE, DIM_NOISE, DIM_IMG, DEVICE,
                                                         dataset, net_gen, net_dis, loss, optim_gen, optim_dis, PATH_MODEL)
 
-    # plt.figure(figsize=(20, 10))
-    # plt.plot(loss_gen, label = 'generator')
-    # plt.plot(loss_dis, label = 'discriminator')
-    # plt.title('Loss of training the gennerator and discriminator')
-    # plt.xlabel('loss')
-    # plt.ylabel('process')
-    # plt.legend()
-    # plt.show()
+    plt.figure(figsize=(20, 10))
+    plt.plot(losses[0], label = 'generator')
+    plt.plot(losses[1], label = 'discriminator')
+    plt.title('Loss of training the gennerator and discriminator')
+    plt.xlabel('loss')
+    plt.ylabel('process')
+    plt.legend()
+    plt.show()
 
 
 if __name__ == "__main__":

@@ -114,10 +114,10 @@ for aw in ARTWORK:
         if not os.path.exists(path_folder):
             os.makedirs(path_folder)
 
-DIMENSION = 128
-DEGREE_OF_ROTATE = 30
+DIMENSION = 64
+DEGREE_OF_ROTATE = 10
 CONTRAST = 5
-SATURATION = 2
+SATURATION = 1.5
 
 for aw in ARTWORK:
     path_ori = PATH_ORI + '/' + aw
@@ -152,15 +152,15 @@ PATH_TAG = '../pokemon_dataset/tags/'
 TAGS = ['eyes', 'smile', 'chibi', 'mouth', 'tail']
 PATH_JSON = 'illustration2vec/tag_list.json'
 THRESHOLD = 0.1
-# import the illustration2vec model
-illust2vec = illustration2vec.i2v.make_i2v_with_chainer("illustration2vec/illust2vec_tag_ver200.caffemodel", "illustration2vec/tag_list.json")
+# # import the illustration2vec model
+# illust2vec = illustration2vec.i2v.make_i2v_with_chainer("illustration2vec/illust2vec_tag_ver200.caffemodel", "illustration2vec/tag_list.json")
 
-i2v_tag_dict = get_tag_values(PATH_JSON, TAGS)
-i2v_tag_dict['smile'] = np.delete(i2v_tag_dict['smile'], 2)
-i2v_tag_dict['tail'] = np.delete(i2v_tag_dict['tail'], [0, 1, 3, 5])
+# i2v_tag_dict = get_tag_values(PATH_JSON, TAGS)
+# i2v_tag_dict['smile'] = np.delete(i2v_tag_dict['smile'], 2)
+# i2v_tag_dict['tail'] = np.delete(i2v_tag_dict['tail'], [0, 1, 3, 5])
 
-for aw in ARTWORK[2:3]:
-    csv_dir = PATH_TAG + 'pokemon_tag_' + aw + '_i2v.csv'
-    img_floder = PATH_ORI + '/' + aw
-    get_i2v_tags_2csv(csv_dir, img_floder, illust2vec, i2v_tag_dict, THRESHOLD)
+# for aw in ARTWORK[2:3]:
+#     csv_dir = PATH_TAG + 'pokemon_tag_' + aw + '_i2v.csv'
+#     img_floder = PATH_ORI + '/' + aw
+#     get_i2v_tags_2csv(csv_dir, img_floder, illust2vec, i2v_tag_dict, THRESHOLD)
 

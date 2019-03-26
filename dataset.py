@@ -7,14 +7,14 @@ import csv
 from PIL import Image
 import numpy as np
 
-def get_channel_mean_std(dataset, dim_img):
-    mean = np.empty(3)
-    std = np.empty(3)
+def get_channel_mean_std(dataset, dim_img, channel=3):
+    mean = np.empty(channel)
+    std = np.empty(channel)
     for i in range(len(dataset)):
         img = dataset[i][0]
         if type(img) == torch.Tensor:
             img = np.transpose(img.numpy(), (1,2,0))
-        for j in range(3):
+        for j in range(channel):
             mean[j] += np.sum(img[:,:, j])
     mean /= dim_img ** 2 * len(dataset)
     
@@ -22,7 +22,7 @@ def get_channel_mean_std(dataset, dim_img):
         img = dataset[i][0]
         if type(img) == torch.Tensor:
             img = np.transpose(img.numpy(), (1,2,0))
-        for j in range(3):
+        for j in range(channel):
             std[j] += np.sum((img[:,:, j] - mean[j])** 2)
     std /= dim_img ** 2 * len(dataset)
     std = np.sqrt(std)
@@ -44,6 +44,8 @@ class Normalize(object):
     def __init__(self, mean, std):
         self.mean = mean
         self.std = std
+        assert len(mean) == len(std)
+        self.channel = len(mean)
 
     def __call__(self, sample):
         image, tags = sample[0], sample[1]
@@ -52,9 +54,9 @@ class Normalize(object):
 
         new_img = torch.full(image.size(), 0)
         # to do the normalize here
-        for i in range(3):
+        for i in range(self.channel):
             # it may be a tensor from torch, or a n-dim array form numpy
-            new_img[i,:,:] = (image[i,:,:] - self.mean[i]) / (self.std[i] + 1)      
+            new_img[i,:,:].add_((image[i,:,:] - self.mean[i]) / (self.std[i] + 1))     
         return (new_img, tags)
 
 class pokemonDataset(Dataset):
