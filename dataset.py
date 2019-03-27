@@ -60,15 +60,20 @@ class Normalize(object):
         return (new_img, tags)
 
 class pokemonDataset(Dataset):
-    def __init__(self, image_dir, tag_dir, artwork_types=None, is_add_i2v_tag=False, transform=None):
+    def __init__(self, image_dir, tag_dir, artwork_types=None, augmentation_types=None, is_add_i2v_tag=False, transform=None):
         self.image_dir = image_dir
         self.tag_dir = tag_dir
         self.artwork_types = None
+
         if artwork_types == None:
             self.artwork_types == listdir(self.image_dir)
         else:
-            assert artwork_types == listdir(self.image_dir)
             self.artwork_types = artwork_types
+        
+        self.augmentation_types = None
+        if augmentation_types != None:
+            self.augmentation_types == augmentation_types
+        
         self.is_add_i2v_tag = is_add_i2v_tag
         self.sample_dir = None
         self.transform = transform
@@ -125,6 +130,9 @@ class pokemonDataset(Dataset):
 
             path_aug = self.image_dir + '/' + aw
             list_aug = listdir(path_aug)
+            if self.augmentation_types != list_aug and self.augmentation_types != None:
+                list_aug = self.augmentation_types
+            
             for aug in list_aug:
                 path_img = path_aug + '/' + aug
                 list_img = listdir(path_img)
@@ -133,5 +141,3 @@ class pokemonDataset(Dataset):
                     path_img_spec = path_img + '/' + img
                     self.sample_dir.append([path_img_spec] + tag)   
 
-    def add_i2v_tag(self):
-        pass

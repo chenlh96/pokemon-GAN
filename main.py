@@ -17,9 +17,10 @@ ARTWORK_TYPE = listdir(PATH_IMAGE)
 PATH_MODEL = '../model'
 if not os.path.exists(PATH_MODEL):
     os.makedirs(PATH_MODEL)
+PATH_MODEL = PATH_MODEL + '/dcgan.pth'
 IS_ADD_I2V_TAG = False
 
-BATCH_SIZE = 32
+BATCH_SIZE = 16
 DIM_IMG = 64
 DIM_NOISE = 100
 LEARNING_RATE = 0.0002
@@ -30,7 +31,7 @@ DEVICE = torch.device("cpu")
 
 def main():
 
-    dataset = pokemonDataset(PATH_IMAGE, PATH_TAG, ARTWORK_TYPE, IS_ADD_I2V_TAG)
+    dataset = pokemonDataset(PATH_IMAGE, PATH_TAG, ['ken sugimori'], IS_ADD_I2V_TAG)
 
     # mean, std = get_channel_mean_std(dataset, DIM_IMG)
     # mean = [220.43362509, 217.50907014, 212.78514176]
@@ -48,14 +49,16 @@ def main():
         net_gen.apply(init_weight)
         net_dis.apply(init_weight)
     else:
-        net_gen, net_dis = Func.load_checkpoint(EPOCHS, net_gen, net_dis, PATH_MODEL, 'dcgan_epoch_%d.pth' % EPOCHS)
+        ext = PATH_MODEL[-4]
+        path_model = PATH_MODEL[:-4] + '_epoch_%d' + ext % EPOCHS
+        net_gen, net_dis = Func.load_checkpoint(EPOCHS, net_gen, net_dis, path_model)
     
     loss = nn.BCELoss()
     optim_gen = optim.Adam(net_gen.parameters(), lr=LEARNING_RATE, betas=(MOMENTUM, 0.99))
     optim_dis = optim.Adam(net_dis.parameters(), lr=LEARNING_RATE, betas=(MOMENTUM, 0.99))
 
-    net_gen, net_dis, losses, _, _ = train_base(EPOCHS, BATCH_SIZE, DIM_NOISE, DIM_IMG, DEVICE,
-                                                        dataset, net_gen, net_dis, loss, optim_gen, optim_dis, PATH_MODEL)
+    net_gen, net_dis, losses, _, imgs = train_base(EPOCHS, BATCH_SIZE, DIM_NOISE, DEVICE,
+                                                    dataset, net_gen, net_dis, loss, optim_gen, optim_dis, PATH_MODEL)
 
     plt.figure(figsize=(20, 10))
     plt.plot(losses[0], label = 'generator')
@@ -64,6 +67,11 @@ def main():
     plt.xlabel('loss')
     plt.ylabel('process')
     plt.legend()
+    plt.show()
+
+    grid_img = Func.make_figure_grid(imgs[0], 8)
+    plt.figure()
+    plt.imshow(grid_img)
     plt.show()
 
 
