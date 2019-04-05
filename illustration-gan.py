@@ -1,60 +1,98 @@
 import torch
 import torch.nn as nn
 import Func
+from custom_layers import bilinear_upsample_deconv2d
 from torch.utils.data import DataLoader
 
 class auxiliary_fc_net(nn.Module):
-    def __init__(self):
-        pass
+    def __init__(self, dim_noise, dim_output_img, num_reduce_half, num_filter):
+        super(auxiliary_fc_net, self).__init__()
+
+        fc_size = 1024
+        dim_feature_map = dim_output_img / (2 ** num_reduce_half)
+        self.fc1 = nn.Linear((dim_feature_map ** 2) * num_filter, fc_size)
+        self.fc2 = nn.Linear(fc_size, fc_size)
+        self.fc3 = nn.Linear(fc_size, fc_size)
+        self.fc4 = nn.Linear(fc_size, dim_noise)
+
+        self.relu1 = nn.ReLU(inplace=True)
+        self.relu2 = nn.ReLU(inplace=True)
+        self.relu3 = nn.ReLU(inplace=True)
+        self.relu4 = nn.ReLU(inplace=True)
     
     def forward(self, x):
+        x = torch.flatten(x)
+        x = self.relu1(self.fc1(x))
+        x = self.relu2(self.fc2(x))
+        x = self.relu3(self.fc3(x))
+        x = self.relu4(self.fc4(x))
         return x
 
 class generator_fc(nn.Module):
-    def __init__(self):
-        pass
+    def __init__(self, dim_noise, dim_output_img, num_reduce_half, num_filter):
+        super(generator_fc, self).__init__()
+
+        fc_size = 1024
+        dim_feature_map = dim_output_img / (2 ** num_reduce_half)
+        self.reshape_params = [num_filter, dim_feature_map, dim_feature_map]
+        self.fc1 = nn.Linear(dim_noise, fc_size)
+        self.fc2 = nn.Linear(fc_size, fc_size)
+        self.fc3 = nn.Linear(fc_size, fc_size)
+        self.fc4 = nn.Linear(fc_size, (dim_feature_map ** 2) * num_filter)
+
+        self.relu1 = nn.ReLU(inplace=True)
+        self.relu2 = nn.ReLU(inplace=True)
+        self.relu3 = nn.ReLU(inplace=True)
+        self.relu4 = nn.ReLU(inplace=True)
 
     def forward(self, x):
+        x = self.relu1(self.fc1(x))
+        x = self.relu2(self.fc2(x))
+        x = self.relu3(self.fc3(x))
+        x = self.relu4(self.fc4(x))
+        x = x.view(self.reshape_params)
         return x
 
 class generator_convt(nn.Module):
 
-    def __init__(self, dim_noise=100, dim_output_img=64, n_channel=3):
+    def __init__(self, input_feature_map, dim_output_img=64, n_channel=3):
         super(generator_convt, self).__init__()
 
         inplace = True
-        init_kernel_sise = int(dim_output_img / (2 ** 4))
+        # init_kernel_sise = int(dim_output_img / (2 ** 4))
         
-        self.conv_trans_2d1 = nn.ConvTranspose2d(dim_noise, dim_output_img*8, init_kernel_sise, 1, 0, bias=False)
+        # self.bilinear1 = nn.Upsample(scale_factor=2, mode='bilinear')
+        # self.conv1 = nn.Conv2d(input_feature_map, dim_output_img * 8, 5, 1, 2)
+        self.bilinear_deconv1 = bilinear_upsample_deconv2d(2, input_feature_map, dim_output_img * 8, 5, 1, 2)
         self.batchnorm1 = nn.BatchNorm2d(dim_output_img*8)
         self.relu1 = nn.ReLU(inplace=inplace)
 
-        self.conv_trans_2d2 = nn.ConvTranspose2d(dim_output_img*8, dim_output_img*4, 4, 2,1, bias=False)
+        self.bilinear_deconv2 = bilinear_upsample_deconv2d(2, dim_output_img * 8, dim_output_img * 4, 5, 1, 2)
         self.batchnorm2 = nn.BatchNorm2d(dim_output_img*4)
         self.relu2 = nn.ReLU(inplace=inplace)
 
-        self.conv_trans_2d3 = nn.ConvTranspose2d(dim_output_img*4, dim_output_img*2,  4,2,1, bias=False)
+        self.bilinear_deconv3 = bilinear_upsample_deconv2d(2, dim_output_img * 4, dim_output_img * 2, 5, 1, 2)
         self.batchnorm3 = nn.BatchNorm2d(dim_output_img*2)
         self.relu3 = nn.ReLU(inplace=inplace)
 
-        self.conv_trans_2d4 = nn.ConvTranspose2d(dim_output_img*2, dim_output_img, 4,2,1, bias=False)
+        self.bilinear_deconv4 = bilinear_upsample_deconv2d(2, dim_output_img * 2, dim_output_img, 5, 1, 2)
         self.batchnorm4 = nn.BatchNorm2d(dim_output_img)
         self.relu4 = nn.ReLU(inplace=inplace)
 
-        # self.conv_trans_2d5 = nn.ConvTranspose2d(dim_output_img, dim_output_img, 4,2,1, bias=False)
-        # self.batchnorm5 = nn.BatchNorm2d(dim_output_img)
-        # self.relu5 = nn.ReLU(inplace=inplace)
 
-        self.conv_trans_2d6 = nn.ConvTranspose2d(dim_output_img, n_channel, 4,2,1, bias=False)
+        self.conv = nn.Conv2d(dim_output_img, n_channel, 5, 1, 2, bias=False)
         self.tanh = nn.Tanh()
 
     def forward(self, x):
-        x = self.relu1(self.batchnorm1(self.conv_trans_2d1(x)))
-        x = self.relu2(self.batchnorm2(self.conv_trans_2d2(x)))
-        x = self.relu3(self.batchnorm3(self.conv_trans_2d3(x)))
-        x = self.relu4(self.batchnorm4(self.conv_trans_2d4(x)))
-        # x = self.relu5(self.batchnorm5(self.conv_trans_2d5(x)))
-        x = self.tanh(self.conv_trans_2d6(x))
+        x = self.batchnorm1(self.bilinear_deconv1(x))
+        x = self.relu1(x)
+        x = self.batchnorm2(self.bilinear_deconv2(x))
+        x = self.relu2(x)
+        x = self.batchnorm3(self.bilinear_deconv3(x))
+        x = self.relu3(x)
+        x = self.batchnorm4(self.bilinear_deconv4(x))
+        x = self.relu4(x)
+        x = self.tanh(self.conv(x))
         return x
 
 
@@ -65,38 +103,42 @@ class discriminator(nn.Module):
 
         slope = 0.2
         inplace = True
-        final_ker_size = int(dim_input_img / (2**4))
+        proba = 0.5
         
-        self.conv1 = nn.Conv2d(n_channel, dim_input_img, 4, 2,1, bias=False)
-        self.batchnorm1 = nn.BatchNorm2d(dim_input_img)
-        self.lrelu1 = nn.LeakyReLU(negative_slope=slope, inplace=inplace)
+        self.conv1 = nn.Conv2d(n_channel, dim_input_img, 5, 1, 2, bias=False)
+        self.lrelu1 = nn.LeakyReLU(negative_slope=slope, inplace=True)
+        self.maxpool1 = nn.MaxPool2d(kernel_size=2, stride=2)
 
-        self.conv2 = nn.Conv2d(dim_input_img, dim_input_img * 2, 4, 2,1, bias=False)
+        self.do2 = nn.Dropout(p=proba, inplace=inplace)
+        self.conv2 = nn.Conv2d(dim_input_img, dim_input_img * 2, 5, 1, 2, bias=False)
         self.batchnorm2 = nn.BatchNorm2d(dim_input_img * 2)
-        self.lrelu2 = nn.LeakyReLU(negative_slope=slope, inplace=inplace)
-
-        self.conv3 = nn.Conv2d(dim_input_img * 2, dim_input_img * 4, 4, 2,1, bias=False)
+        self.lrelu2 = nn.LeakyReLU(negative_slope=slope, inplace=True)
+        self.maxpool2 = nn.MaxPool2d(kernel_size=2, stride=2)
+ 
+        self.do3 = nn.Dropout(p=proba, inplace=inplace)
+        self.conv3 = nn.Conv2d(dim_input_img * 2, dim_input_img * 4, 5, 1, 2, bias=False)
         self.batchnorm3 = nn.BatchNorm2d(dim_input_img * 4)
-        self.lrelu3 = nn.LeakyReLU(negative_slope=slope, inplace=inplace)
+        self.lrelu3 = nn.LeakyReLU(negative_slope=slope, inplace=True)
+        self.maxpool3 = nn.MaxPool2d(kernel_size=2, stride=2)
+ 
+        self.do4 = nn.Dropout(p=proba, inplace=inplace)
+        self.conv4 = nn.Conv2d(dim_input_img * 4, dim_input_img * 8, 5, 1, 2, bias=False)
+        self.batchnorm4 = nn.BatchNorm2d(dim_input_img * 8)
+        self.lrelu4 = nn.LeakyReLU(negative_slope=slope, inplace=True)
+        self.maxpool4 = nn.MaxPool2d(kernel_size=2, stride=2)
 
-        # self.conv4 = nn.Conv2d(dim_input_img * 4, dim_input_img * 4, 4, 2,1, bias=False)
-        # self.batchnorm4 = nn.BatchNorm2d(dim_input_img * 4)
-        # self.lrelu4 = nn.LeakyReLU(negative_slope=slope, inplace=inplace)
+        fc_size = 1024
 
-        self.conv5 = nn.Conv2d(dim_input_img * 4, dim_input_img * 8, 4, 2,1, bias=False)
-        self.batchnorm5 = nn.BatchNorm2d(dim_input_img * 8)
-        self.lrelu5 = nn.LeakyReLU(negative_slope=slope, inplace=inplace)
-
-        self.conv6 = nn.Conv2d(dim_input_img * 8, 1, final_ker_size, 1, 0, bias=False)
-        self.sig = nn.Sigmoid()
+        self.fc1 = nn.Linear(dim_input_img * 8, fc_size)
+        self.lrelu_fc1 = nn.LeakyReLU(negative_slope=slope, inplace=inplace)
+        self.fc2 = nn.Linear(fc_size, fc_size)
+        self.lrelu_fc2 = nn.LeakyReLU(negative_slope=slope, inplace=inplace)
+        self.fc3 = nn.Linear(fc_size, fc_size)
+        self.lrelu_fc3 = nn.LeakyReLU(negative_slope=slope, inplace=inplace)
+ 
 
     def forward(self, x):
-        x = self.lrelu1(self.batchnorm1(self.conv1(x)))
-        x = self.lrelu2(self.batchnorm2(self.conv2(x)))
-        x = self.lrelu3(self.batchnorm3(self.conv3(x)))
-        # x = self.lrelu4(self.batchnorm4(self.conv4(x)))
-        x = self.lrelu5(self.batchnorm5(self.conv5(x)))
-        x = self.sig(self.conv6(x))
+
         return x
 
 def train_illustrate():

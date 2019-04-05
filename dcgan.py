@@ -9,7 +9,8 @@ class generator(nn.Module):
         super(generator, self).__init__()
 
         inplace = True
-        init_kernel_sise = int(dim_output_img / (2 ** 4))
+        num_reduce_half=4
+        init_kernel_sise = int(dim_output_img / (2 ** num_reduce_half))
         
         self.conv_trans_2d1 = nn.ConvTranspose2d(dim_noise, dim_output_img*8, init_kernel_sise, 1, 0, bias=False)
         self.batchnorm1 = nn.BatchNorm2d(dim_output_img*8)
@@ -51,7 +52,8 @@ class discriminator(nn.Module):
 
         slope = 0.2
         inplace = True
-        final_ker_size = int(dim_input_img / (2**4))
+        num_reduce_half=4
+        final_ker_size = int(dim_input_img / (2**num_reduce_half))
         
         self.conv1 = nn.Conv2d(n_channel, dim_input_img, 4, 2,1, bias=False)
         self.batchnorm1 = nn.BatchNorm2d(dim_input_img)
