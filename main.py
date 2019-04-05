@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torchvision import transforms
 
-import Func
+import util
 from dataset import pokemonDataset, ToDoubleTensor, Normalize, get_channel_mean_std
 from dcgan import generator, discriminator, train_base, init_weight
 
@@ -51,7 +51,7 @@ def main():
     else:
         ext = PATH_MODEL[-4]
         path_model = PATH_MODEL[:-4] + '_epoch_%d' + ext % EPOCHS
-        net_gen, net_dis = Func.load_checkpoint(EPOCHS, net_gen, net_dis, path_model)
+        net_gen, net_dis = util.load_checkpoint(EPOCHS, net_gen, net_dis, path_model)
     
     loss = nn.BCELoss()
     optim_gen = optim.Adam(net_gen.parameters(), lr=LEARNING_RATE, betas=(MOMENTUM, 0.99))
@@ -69,7 +69,7 @@ def main():
     plt.legend()
     plt.show()
 
-    grid_img = Func.make_figure_grid(imgs[0], 8)
+    grid_img = util.make_figure_grid(imgs[0], 8)
     plt.figure()
     plt.imshow(grid_img)
     plt.show()

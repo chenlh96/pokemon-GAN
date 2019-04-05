@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import Func
-from custom_layers import bilinear_upsample_deconv2d
+from custom_layers import bilinear_upsample_deconv2d, minibatch_discrimination
 from torch.utils.data import DataLoader
 
 class auxiliary_fc_net(nn.Module):
@@ -127,19 +127,135 @@ class discriminator(nn.Module):
         self.lrelu4 = nn.LeakyReLU(negative_slope=slope, inplace=True)
         self.maxpool4 = nn.MaxPool2d(kernel_size=2, stride=2)
 
+        dim_output_feature = 100
+        dim_c = 1000
+
+        self.miniDis = minibatch_discrimination(dim_input_img * 8 * (5 ** 2), dim_output_feature, dim_c)
+
         fc_size = 1024
 
-        self.fc1 = nn.Linear(dim_input_img * 8, fc_size)
+        self.fc1 = nn.Linear(dim_input_img * 8 * (5 ** 2), fc_size)
         self.lrelu_fc1 = nn.LeakyReLU(negative_slope=slope, inplace=inplace)
         self.fc2 = nn.Linear(fc_size, fc_size)
         self.lrelu_fc2 = nn.LeakyReLU(negative_slope=slope, inplace=inplace)
         self.fc3 = nn.Linear(fc_size, fc_size)
         self.lrelu_fc3 = nn.LeakyReLU(negative_slope=slope, inplace=inplace)
+
+        self.fc4 = nn.Linear(fc_size, fc_size + dim_output_feature + dim_input_img * 8 * (5 ** 2))
+        self.sig = nn.Sigmoid()
  
 
     def forward(self, x):
+        x = self.maxpool1(self.lrelu1(self.conv1(x)))
+
+        x = self.do2(self.batchnorm2(self.conv2(x)))
+        x = self.lrelu2(self.maxpool2(x))
+
+        x = self.do3(self.batchnorm3(self.conv3(x)))
+        x = self.lrelu3(self.maxpool3(x))
+
+        x = self.do4(self.batchnorm4(self.conv4(x)))
+        x = self.lrelu4(self.maxpool4(x))
+
+        x_mini_dis = self.miniDis(x)
+
+        x = self.lrelu_fc1(self.fc1(x))
+        x = self.lrelu_fc2(self.fc2(x))
+        x = self.lrelu_fc3(self.fc3(x))
+
+        x = torch.concat([x, x_mini_dis], 1)
+        x = self.sig(self.fc4(x))
 
         return x
 
-def train_illustrate():
-    pass
+def train_illustration(epochs, batch_size, dim_noise, device, dataset, generator, discriminator, loss, optimizer_gen, optimizer_dis, filepath=None):
+    # load the data
+    worker = 2
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=worker)
+    
+    # create the list to store each loss
+    loss_list, score_list, img_list = [], [], []
+    num_fixed_ns_img = 64
+    fixed_noise = torch.randn(num_fixed_ns_img, dim_noise, 1, 1, device=device)
+
+    # start iterating the epoch
+    for e in range(epochs):
+        loss_dis, loss_gen, score_dis_real, score_dis_fake, score_gen = 0, 0, 0, 0, 0
+
+        for i, data in enumerate(dataloader):
+            b_size = batch_size
+            if len(data[0]) < batch_size:
+                b_size = len(data[0])
+            # ---------------------------
+            # 1. Train the discriminator
+            # ---------------------------
+            # generate noise samples from the generator
+            batch_noise = torch.randn(b_size, dim_noise, 1, 1, device=device)
+            fake_data = generator(batch_noise)
+
+            # start to train the discriminator
+            discriminator.zero_grad()
+            # calculate the loss of the noise samples, which assigns the same label 0
+            # for all the samples, and get the single output(marks) from the discriminator
+            output = discriminator(fake_data.detach()).view(-1) # use .detach() to stop the requirement of gradient
+            label = torch.full((b_size,), 0, device=device)
+            loss_d_ns = loss(output, label)
+            loss_d_ns.backward()
+            score_dis_fake = output.mean().item()
+            
+            # calculate the loss of the real samples and assigns label 1 to represent
+            # all samples are true and get the single output(marks) from the discriminator
+            read_data = data[0].to(device)
+            output = discriminator(read_data).view(-1)
+            label.fill_(1)
+            loss_d_real = loss(output, label)
+            loss_d_real.backward()
+            score_dis_real = output.mean().item()
+
+            loss_d = loss_d_ns + loss_d_real
+            loss_dis = loss_d.item()
+            optimizer_dis.step()
+
+            # ---------------------------
+            # 2. Train the generator
+            # ---------------------------
+            # Feed the noise samplea to the discriminator agian to geit the accurate scores
+            # after training the discriminator, and assign label 1 not to see the noise as
+            # real label but to let the loss function to be correct and do correct back propogation
+            generator.zero_grad()            
+            # batch_noise = Func.torch.randn(b_size, dim_noise)
+            # fake_data = generator(batch_noise)
+            output = discriminator(fake_data).view(-1)
+            loss_g = loss(output, label)
+            loss_g.backward()
+            score_gen = output.mean().item()
+            loss_gen = loss_g.item()
+            optimizer_gen.step()
+
+
+            # print information to the console
+            # print information 5 times in a epoch
+            num2print = 30
+            if (i + 1) % num2print == 0:
+                print('epoch: %d, iter: %d, loss_D: %.4f, loss_G: %.4f;\t Scores: train D: D(x): %.4f, D(G(z)): %.4f train G: D(G(z))： %.4f'
+                        % (e, (i + 1), loss_dis, loss_gen, score_dis_real, score_dis_fake, score_gen))           
+                
+                # store the final loss for D and G for a specific time interval of a whole epoch
+                loss_list.append([loss_dis, loss_gen])
+                # store the final score from D for noise and real samples for a specific time imterval on current epoch
+                score_list.append([score_dis_fake, score_dis_real, score_gen])
+
+        loss_list.append([loss_dis, loss_gen])
+        score_list.append([score_dis_fake, score_dis_real, score_gen])
+        # store the image that the generator create for each epoch
+        test_img = generator(fixed_noise).detach().cpu()
+        img_list.append(test_img.numpy())
+
+        # save the model
+        if (e + 1) % 5 == 0:
+            Func.save_checkpoint(e, generator, discriminator, filepath)
+    
+    loss_list = list(map(list, zip(*loss_list)))
+    score_list = list(map(list, zip(*score_list)))
+        
+    return generator, discriminator, loss_list, score_list, img_list

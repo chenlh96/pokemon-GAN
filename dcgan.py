@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-import Func
+import util
 from torch.utils.data import DataLoader
 
 class generator(nn.Module):
@@ -185,7 +185,7 @@ def train_base(epochs, batch_size, dim_noise, device, dataset, generator, discri
 
         # save the model
         if (e + 1) % 5 == 0:
-            Func.save_checkpoint(e, generator, discriminator, filepath)
+            util.save_checkpoint(e, generator, discriminator, filepath)
     
     loss_list = list(map(list, zip(*loss_list)))
     score_list = list(map(list, zip(*score_list)))

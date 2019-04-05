@@ -14,8 +14,26 @@ class bilinear_upsample_deconv2d(nn.Module):
         return x
 
 class minibatch_discrimination(nn.Module):
-    def __init__(self):
+    def __init__(self, dim_input_feature, dim_output_feature, c):
         super(minibatch_discrimination, self).__init__()
+        self.input_feture = dim_input_feature
+        self.output_feature = dim_input_feature
+        self.output_feature = dim_output_feature
+        self.c = c
+        self.tensor = nn.Parameter(torch.empty(self.input_feture, self.output_feature, self.c))
+        nn.init.normal_(self.tensor, mean=0, std=1)
+
         
     def forward(self, x):
-         return x
+        broadcast_mat = self.tensor.view(self.input_feture, -1)
+        mat = torch.mm(x, broadcast_mat)
+        mat = mat.view(-1, self.output_feature, self.c)
+
+        mat = mat.unsequeeze(0)
+        mat_T = mat.permute(1, 0, 2, 3)
+        output = torch.exp(-torch.abs(mat - mat_T).sum(3))
+        output = output.sum(0)
+
+        x = torch.cat([x, output], 1)
+        return x
+
