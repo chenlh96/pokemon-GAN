@@ -3,11 +3,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from torchvision import transforms
 
-import util
-from dataset import pokemonDataset, ToDoubleTensor, Normalize, get_channel_mean_std
 import dcgan as dc
 import illustration_gan as illust
 import config
+import util
+import dataset as dset
+from dataset import pokemonDataset
 
 PATH_IMAGE = '../pokemon_dataset/image'
 PATH_TAG = '../pokemon_dataset/tags'
@@ -19,25 +20,26 @@ if not os.path.exists(PATH_MODEL):
 IS_ADD_I2V_TAG = False
 
 def main():
-
+    # create the dataset
     dataset = pokemonDataset(PATH_IMAGE, PATH_TAG, ['ken sugimori'], IS_ADD_I2V_TAG)
 
-    # mean, std = get_channel_mean_std(dataset, DIM_IMG)
+
+    # mean, std = dset.get_channel_mean_std(dataset, DIM_IMG)
     # mean = [220.43362509, 217.50907014, 212.78514176]
     # std = [71.7985852,  73.64374336, 78.23258064]
 
-    transform=transforms.Compose([ToDoubleTensor(), Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])])
+    transform=transforms.Compose([dset.ToDoubleTensor(), dset.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])])
     dataset.set_transform(transform)
 
-    # conf = config.config_dcgan
-    # net_gen, net_dis = dc.build_gen_dis(conf)
-    # _, _, losses, imgs = dc.train(dataset, net_gen, net_dis, config.conf)
+    # CONFIG = config.config_dcgan
+    # net_gen, net_dis = dc.build_gen_dis(CONFIG)
+    # _, _, losses, imgs = dc.train(dataset, net_gen, net_dis, CONFIG)
 
-    conf = config.config_illustration_gan
-    net_gen, net_dis = illust.build_gen_dis(conf)
+    CONFIG = config.config_illustration_gan
+    net_gen, net_dis = illust.build_gen_dis(CONFIG)
     print(net_gen)
     print(net_dis)
-    net_gen, net_dis, losses, imgs = illust.train(dataset, net_gen, net_dis, conf)
+    net_gen, net_dis, losses, imgs = illust.train(dataset, net_gen, net_dis, CONFIG)
 
     plt.figure(figsize=(20, 10))
     plt.plot(losses[0], label = 'generator')
