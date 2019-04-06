@@ -202,7 +202,7 @@ def build_gen_dis(config):
         net_dis.apply(init_weight)
     else:
         ext = config.PATH_MODEL[-4]
-        path_model = config.PATH_MODEL[:-4] + '_epoch_%d' + ext % config.EPOCHS
+        path_model = config.PATH_MODEL[:-4] + '_epoch_%d' + ext % config.IMPORT_IDX_EPOCH
         net_gen, net_dis = util.load_checkpoint(config.EPOCHS, net_gen, net_dis, path_model)
 
     return net_gen, net_dis

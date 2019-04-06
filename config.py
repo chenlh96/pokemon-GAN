@@ -10,6 +10,7 @@ class configBase():
     MOMENTUM = 0.5
     EPOCHS = 1
     INIT = True
+    IMPORT_IDX_EPOCH = EPOCHS
     DEVICE = torch.device("cpu")
 
 class config_dcgan(configBase):
@@ -22,6 +23,7 @@ class config_dcgan(configBase):
     MOMENTUM = 0.5
     EPOCHS = 1
     INIT = True
+    IMPORT_IDX_EPOCH = EPOCHS
     DEVICE = torch.device("cpu")
 
 class config_illustration_gan(configBase):
@@ -34,5 +36,6 @@ class config_illustration_gan(configBase):
     MOMENTUM = 0.5
     EPOCHS = 1
     INIT = True
+    IMPORT_IDX_EPOCH = EPOCHS
     DEVICE = torch.device("cpu")
 
