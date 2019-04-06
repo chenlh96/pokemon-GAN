@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-import Func
+import util
 from custom_layers import bilinear_upsample_deconv2d, minibatch_discrimination
 from torch.utils.data import DataLoader
 
@@ -96,6 +96,21 @@ class generator_convt(nn.Module):
         return x
 
 
+class generator(nn.Module):
+
+    def __init__(self, generator_convt, generator_fc, auxiliary_fc_net):
+        self.convt = generator_convt
+        self.fc = generator_fc
+        self.auxiliary = auxiliary_fc_net
+
+    def forward(self, x):
+        x_fc = self.fc(x)
+        x_data = self.convt(x)
+        x_id = self.auxiliary(x_fc)
+
+        return x_data, x_id
+
+
 class discriminator(nn.Module):
 
     def __init__(self, dim_input_img=64, n_channel = 3):
@@ -142,7 +157,7 @@ class discriminator(nn.Module):
         self.lrelu_fc3 = nn.LeakyReLU(negative_slope=slope, inplace=inplace)
 
         self.fc4 = nn.Linear(fc_size, fc_size + dim_output_feature + dim_input_img * 8 * (5 ** 2))
-        self.sig = nn.Sigmoid()
+        self.lrelu_fc4 = nn.LeakyReLU(negative_slope=slope)
  
 
     def forward(self, x):
@@ -164,11 +179,25 @@ class discriminator(nn.Module):
         x = self.lrelu_fc3(self.fc3(x))
 
         x = torch.concat([x, x_mini_dis], 1)
-        x = self.sig(self.fc4(x))
+        x = self.lrelu_fc4(self.fc4(x))
 
         return x
 
-def train_illustration(epochs, batch_size, dim_noise, device, dataset, generator, discriminator, loss, optimizer_gen, optimizer_dis, filepath=None):
+def init_weight(layer):
+    std = 0.02
+    if type(layer) == nn.ConvTranspose2d:
+        nn.init.normal_(layer.weight.data, mean=0, std=std)
+    elif type(layer) == nn.Conv2d:
+        nn.init.normal_(layer.weight.data, mean=0, std=std)
+    elif type(layer) == nn.Linear:
+        nn.init.normal_(layer.weight.data, mean=0, std=std)
+    elif type(layer) == bilinear_upsample_deconv2d:
+        nn.init.normal_(layer.weight.data, mean=0, std=std)
+    elif type(layer) == nn.BatchNorm2d:
+        nn.init.normal_(layer.weight.data, mean=1, std=std)
+        nn.init.constant_(layer.bias.data, 0)
+
+def train_illustration(epochs, batch_size, dim_noise, device, dataset, generator, discriminator, loss, loss_auxiliary, optimizer_gen, optimizer_dis, filepath=None):
     # load the data
     worker = 2
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=worker)
@@ -191,7 +220,7 @@ def train_illustration(epochs, batch_size, dim_noise, device, dataset, generator
             # ---------------------------
             # generate noise samples from the generator
             batch_noise = torch.randn(b_size, dim_noise, 1, 1, device=device)
-            fake_data = generator(batch_noise)
+            fake_data, noise_id = generator(batch_noise)
 
             # start to train the discriminator
             discriminator.zero_grad()
@@ -226,7 +255,9 @@ def train_illustration(epochs, batch_size, dim_noise, device, dataset, generator
             # batch_noise = Func.torch.randn(b_size, dim_noise)
             # fake_data = generator(batch_noise)
             output = discriminator(fake_data).view(-1)
-            loss_g = loss(output, label)
+            loss_main = loss(output, label)
+            loss_aux = loss_auxiliary(noise_id, batch_noise)
+            loss_g = loss_main + loss_aux
             loss_g.backward()
             score_gen = output.mean().item()
             loss_gen = loss_g.item()
@@ -253,7 +284,7 @@ def train_illustration(epochs, batch_size, dim_noise, device, dataset, generator
 
         # save the model
         if (e + 1) % 5 == 0:
-            Func.save_checkpoint(e, generator, discriminator, filepath)
+            util.save_checkpoint(e, generator, discriminator, filepath)
     
     loss_list = list(map(list, zip(*loss_list)))
     score_list = list(map(list, zip(*score_list)))
