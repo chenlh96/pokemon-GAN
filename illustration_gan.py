@@ -11,7 +11,8 @@ class auxiliary_fc_net(nn.Module):
 
         fc_size = 1024
         dim_feature_map = dim_output_img / (2 ** num_reduce_half)
-        self.fc1 = nn.Linear((dim_feature_map ** 2) * num_filter, fc_size)
+        self.dim_imput = int((dim_feature_map ** 2) * num_filter)
+        self.fc1 = nn.Linear(self.dim_imput, fc_size)
         self.fc2 = nn.Linear(fc_size, fc_size)
         self.fc3 = nn.Linear(fc_size, fc_size)
         self.fc4 = nn.Linear(fc_size, dim_noise)
@@ -22,7 +23,7 @@ class auxiliary_fc_net(nn.Module):
         self.relu4 = nn.ReLU(inplace=True)
     
     def forward(self, x):
-        x = torch.flatten(x)
+        x = x.view(-1, self.dim_imput)
         x = self.relu1(self.fc1(x))
         x = self.relu2(self.fc2(x))
         x = self.relu3(self.fc3(x))
@@ -34,12 +35,12 @@ class generator_fc(nn.Module):
         super(generator_fc, self).__init__()
 
         fc_size = 1024
-        dim_feature_map = dim_output_img / (2 ** num_reduce_half)
-        self.reshape_params = [num_filter, dim_feature_map, dim_feature_map]
+        dim_feature_map = int(dim_output_img / (2 ** num_reduce_half))
+        self.reshape_params = [-1, num_filter, dim_feature_map, dim_feature_map]
         self.fc1 = nn.Linear(dim_noise, fc_size)
         self.fc2 = nn.Linear(fc_size, fc_size)
         self.fc3 = nn.Linear(fc_size, fc_size)
-        self.fc4 = nn.Linear(fc_size, (dim_feature_map ** 2) * num_filter)
+        self.fc4 = nn.Linear(fc_size, int((dim_feature_map ** 2) * num_filter))
 
         self.relu1 = nn.ReLU(inplace=True)
         self.relu2 = nn.ReLU(inplace=True)
@@ -109,7 +110,7 @@ class generator(nn.Module):
 
     def forward(self, x):
         x_fc = self.fc(x)
-        x_data = self.convt(x)
+        x_data = self.convt(x_fc)
         x_id = self.auxiliary(x_fc)
 
         return x_data, x_id
@@ -148,41 +149,42 @@ class discriminator(nn.Module):
 
         dim_output_feature = 100
         dim_c = 1000
+        dim_feature_map = int(dim_input_img / (2 ** 4))
+        # assert dim_feature_map == 4
 
-        self.miniDis = minibatch_discrimination(dim_input_img * 8 * (5 ** 2), dim_output_feature, dim_c)
+        self.flatten_size = dim_input_img * 8 * (dim_feature_map ** 2)
+        self.miniDis = minibatch_discrimination(self.flatten_size, dim_output_feature, dim_c)
 
         fc_size = 1024
 
-        self.fc1 = nn.Linear(dim_input_img * 8 * (5 ** 2), fc_size)
+        self.fc1 = nn.Linear(self.flatten_size, fc_size)
         self.lrelu_fc1 = nn.LeakyReLU(negative_slope=slope, inplace=inplace)
         self.fc2 = nn.Linear(fc_size, fc_size)
         self.lrelu_fc2 = nn.LeakyReLU(negative_slope=slope, inplace=inplace)
         self.fc3 = nn.Linear(fc_size, fc_size)
         self.lrelu_fc3 = nn.LeakyReLU(negative_slope=slope, inplace=inplace)
 
-        self.fc4 = nn.Linear(fc_size, fc_size + dim_output_feature + dim_input_img * 8 * (5 ** 2))
+        self.fc4 = nn.Linear(fc_size + self.flatten_size + dim_output_feature, 1)
         self.lrelu_fc4 = nn.LeakyReLU(negative_slope=slope)
  
 
     def forward(self, x):
         x = self.maxpool1(self.lrelu1(self.conv1(x)))
-
         x = self.do2(self.batchnorm2(self.conv2(x)))
         x = self.lrelu2(self.maxpool2(x))
-
         x = self.do3(self.batchnorm3(self.conv3(x)))
         x = self.lrelu3(self.maxpool3(x))
-
         x = self.do4(self.batchnorm4(self.conv4(x)))
         x = self.lrelu4(self.maxpool4(x))
 
+        x = x.view(-1, self.flatten_size)
         x_mini_dis = self.miniDis(x)
 
         x = self.lrelu_fc1(self.fc1(x))
         x = self.lrelu_fc2(self.fc2(x))
         x = self.lrelu_fc3(self.fc3(x))
 
-        x = torch.concat([x, x_mini_dis], 1)
+        x = torch.cat([x, x_mini_dis], 1)
         x = self.lrelu_fc4(self.fc4(x))
 
         return x
@@ -223,7 +225,7 @@ def train_base(epochs, batch_size, dim_noise, device, dataset, generator, discri
             # 1. Train the discriminator
             # ---------------------------
             # generate noise samples from the generator
-            batch_noise = torch.randn(b_size, dim_noise, 1, 1, device=device)
+            batch_noise = torch.randn(b_size, dim_noise, device=device)
             fake_data, noise_id = generator(batch_noise)
 
             # start to train the discriminator
@@ -295,24 +297,29 @@ def train_base(epochs, batch_size, dim_noise, device, dataset, generator, discri
         
     return generator, discriminator, loss_list, score_list, img_list
 
-def train(dataset, CONFIG):
-    # CONFIG = config.config_illustration_gan
+def build_gen_dis(config):
+    net_gen = generator(config.DIM_NOISE, config.DIM_IMG).to(config.DEVICE)
+    net_dis = discriminator(config.DIM_IMG).to(config.DEVICE)
 
-    net_gen = generator(CONFIG.DIM_NOISE, CONFIG.DIM_IMG).to(CONFIG.DEVICE)
-    net_dis = generator(CONFIG.DIM_IMG).to(CONFIG.DEVICE)
-    print(net_gen)
-    print(net_dis)
     net_gen.apply(init_weight)
     net_dis.apply(init_weight)
+
+    return net_gen, net_dis
+
+def train(dataset, net_gen, net_dis, config):
+
+    # config = config.config_illustration_gan
+    # net_gen = generator(config.DIM_NOISE, config.DIM_IMG).to(config.DEVICE)
+    # net_dis = discriminator(config.DIM_IMG).to(config.DEVICE)
 
     loss_main = nn.BCEWithLogitsLoss()
     loss_aux = nn.MSELoss()
 
-    optim_gen = optim.Adam(net_gen.parameters(), lr=CONFIG.LEARNING_RATE, betas=(CONFIG.MOMENTUM, 0.99))
-    optim_dis = optim.Adam(net_dis.parameters(), lr=CONFIG.LEARNING_RATE, betas=(CONFIG.MOMENTUM, 0.99))
+    optim_gen = optim.Adam(net_gen.parameters(), lr=config.LEARNING_RATE, betas=(config.MOMENTUM, 0.99))
+    optim_dis = optim.Adam(net_dis.parameters(), lr=config.LEARNING_RATE, betas=(config.MOMENTUM, 0.99))
 
-    net_gen, net_dis, losses, _, imgs = train_base(CONFIG.EPOCHS, CONFIG.BATCH_SIZE, CONFIG.DIM_NOISE, CONFIG.DEVICE,
-                                                    dataset, net_gen, net_dis, loss_main, loss_aux, optim_gen, optim_dis, CONFIG.PATH_MODEL)
+    net_gen, net_dis, losses, _, imgs = train_base(config.EPOCHS, config.BATCH_SIZE, config.DIM_NOISE, config.DEVICE,
+                                                    dataset, net_gen, net_dis, loss_main, loss_aux, optim_gen, optim_dis, config.PATH_MODEL)
     
     return net_gen, net_dis, losses, imgs
 

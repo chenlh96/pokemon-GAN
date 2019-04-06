@@ -193,27 +193,31 @@ def train_base(epochs, batch_size, dim_noise, device, dataset, generator, discri
         
     return generator, discriminator, loss_list, score_list, img_list
 
-def train(dataset, CONFIG):
-    # CONFIG = config.config_dcgan
-    net_gen = generator(CONFIG.DIM_NOISE, CONFIG.DIM_IMG).to(CONFIG.DEVICE)
-    net_dis = discriminator(CONFIG.DIM_IMG).to(CONFIG.DEVICE)
-    print(net_gen)
-    print(net_dis)
+def build_gen_dis(config):
+    net_gen = generator(config.DIM_NOISE, config.DIM_IMG).to(config.DEVICE)
+    net_dis = discriminator(config.DIM_IMG).to(config.DEVICE)
 
-    if CONFIG.INIT:
+    if config.INIT:
         net_gen.apply(init_weight)
         net_dis.apply(init_weight)
     else:
-        ext = CONFIG.PATH_MODEL[-4]
-        path_model = CONFIG.PATH_MODEL[:-4] + '_epoch_%d' + ext % CONFIG.EPOCHS
-        net_gen, net_dis = util.load_checkpoint(CONFIG.EPOCHS, net_gen, net_dis, path_model)
+        ext = config.PATH_MODEL[-4]
+        path_model = config.PATH_MODEL[:-4] + '_epoch_%d' + ext % config.EPOCHS
+        net_gen, net_dis = util.load_checkpoint(config.EPOCHS, net_gen, net_dis, path_model)
+
+    return net_gen, net_dis
+
+def train(dataset, net_gen, net_dis, config):
+    # config = config.config_dcgan
+    # net_gen = generator(config.DIM_NOISE, config.DIM_IMG).to(config.DEVICE)
+    # net_dis = discriminator(config.DIM_IMG).to(config.DEVICE)
     
     loss = nn.BCELoss()
-    optim_gen = optim.Adam(net_gen.parameters(), lr=CONFIG.LEARNING_RATE, betas=(CONFIG.MOMENTUM, 0.99))
-    optim_dis = optim.Adam(net_dis.parameters(), lr=CONFIG.LEARNING_RATE, betas=(CONFIG.MOMENTUM, 0.99))
+    optim_gen = optim.Adam(net_gen.parameters(), lr=config.LEARNING_RATE, betas=(config.MOMENTUM, 0.99))
+    optim_dis = optim.Adam(net_dis.parameters(), lr=config.LEARNING_RATE, betas=(config.MOMENTUM, 0.99))
 
-    net_gen, net_dis, losses, _, imgs = train_base(CONFIG.EPOCHS, CONFIG.BATCH_SIZE, CONFIG.DIM_NOISE, CONFIG.DEVICE,
-                                                    dataset, net_gen, net_dis, loss, optim_gen, optim_dis, CONFIG.PATH_MODEL)
+    net_gen, net_dis, losses, _, imgs = train_base(config.EPOCHS, config.BATCH_SIZE, config.DIM_NOISE, config.DEVICE,
+                                                    dataset, net_gen, net_dis, loss, optim_gen, optim_dis, config.PATH_MODEL)
     
     return net_gen, net_dis, losses, imgs
 

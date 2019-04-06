@@ -29,8 +29,15 @@ def main():
     transform=transforms.Compose([ToDoubleTensor(), Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])])
     dataset.set_transform(transform)
 
-    # _, _, losses, imgs = dc.train(dataset, config.config_dcgan)
-    _, _, losses, imgs = illust.train(dataset, config.config_illustration_gan)
+    # conf = config.config_dcgan
+    # net_gen, net_dis = dc.build_gen_dis(conf)
+    # _, _, losses, imgs = dc.train(dataset, net_gen, net_dis, config.conf)
+
+    conf = config.config_illustration_gan
+    net_gen, net_dis = illust.build_gen_dis(conf)
+    print(net_gen)
+    print(net_dis)
+    net_gen, net_dis, losses, imgs = illust.train(dataset, net_gen, net_dis, conf)
 
     plt.figure(figsize=(20, 10))
     plt.plot(losses[0], label = 'generator')

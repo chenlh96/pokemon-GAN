@@ -27,7 +27,7 @@ class config_dcgan(configBase):
 class config_illustration_gan(configBase):
     PATH_MODEL = '../model/illustration-gan.pth'
     IS_ADD_I2V_TAG = False
-    BATCH_SIZE = 16
+    BATCH_SIZE = 1
     DIM_IMG = 64
     DIM_NOISE = 100
     LEARNING_RATE = 0.0002
