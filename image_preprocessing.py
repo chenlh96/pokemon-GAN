@@ -6,7 +6,6 @@ import csv
 import illustration2vec.i2v
 import json
 
-
 # fix the figure size to 256 * 256 or 64 * 64 and turn the figures into RGB mode, where we change
 # its format to .jpg
 
@@ -92,6 +91,27 @@ def get_i2v_tags_2csv(csv_dir, img_folder_dir, illust2vec, i2v_tag_dict, thresho
             tagWriter = csv.writer(f)
             tagWriter.writerow(np.concatenate([[img_f[:-4]], img_tags]))
 
+def order_tags(path_csv, path_img_folder):
+    tag_dict = {}
+    with open(path_csv, 'r') as f:
+        tagReader = csv.reader(f)
+        for row in tagReader:
+            tag_dict[row[0]] = row
+
+    list_img_name = listdir(path_img_folder)
+    
+    with open(path_csv, 'w', newline = '') as f:
+        tagWriter = csv.writer(f)
+        tagWriter.writerow(['filename', 'index', 'name', 'type1', 'type2', 'ability1', 'ability2', 'color'])
+        for name in list_img_name:
+            tagWriter.writerow(tag_dict[name[:-4]])
+
+# make new dir
+def makeImageFolderDir(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
+    return path
+
 
 # this is the main part of this script, we will do augmentation and tag the image in
 # the following work
@@ -103,52 +123,24 @@ PATH_DATASET = 'C:/Users/Leheng Chen/Desktop/HKUST/pokemon-GAN/pokemon_dataset/i
 ORI_TYPE = 'ori'
 AUGMENTATION_TYPE = ['flip', 'left rotation', 'right roration', 'contrast', 'saturation']
 
-if not os.path.exists(PATH_DATASET):
-    os.makedirs(PATH_DATASET)
-for aw in ARTWORK:
-    path_folder = PATH_DATASET+'/'+aw
-    if not os.path.exists(path_folder):
-        os.makedirs(path_folder)
-    for aug in np.concatenate([[ORI_TYPE], AUGMENTATION_TYPE]):
-        path_folder = PATH_DATASET+'/'+aw+'/'+aug
-        if not os.path.exists(path_folder):
-            os.makedirs(path_folder)
-
 DIMENSION = 64
-DEGREE_OF_ROTATE = 10
-CONTRAST = 5
+DEGREE_OF_ROTATE = 15
+CONTRAST = 3
 SATURATION = 1.5
 
 for aw in ARTWORK:
     path_ori = PATH_ORI + '/' + aw
-    dest_ori = PATH_DATASET + '/' + aw + '/' + ORI_TYPE
+    dest_aug_folder = makeImageFolderDir(PATH_DATASET + '/' + aw)
+    dest_ori = makeImageFolderDir(dest_aug_folder + '/' + ORI_TYPE)
     rescale_n_2rgb(path_ori, dest_ori, DIMENSION)
-    dest_aug_folder = PATH_DATASET + '/' + aw
     for aug in AUGMENTATION_TYPE:
-        dest_aug = dest_aug_folder + '/' + aug
+        dest_aug = makeImageFolderDir(dest_aug_folder + '/' + aug)
         augamentation(dest_ori, dest_aug, aug, DIMENSION, DEGREE_OF_ROTATE, CONTRAST, SATURATION)
 
+
 # Now we first process the tags
-# To better looking the tags, we first list the tags by the order of the pokemon index(shown in the folder of origin image)
 
 PATH_TAG = '../pokemon_dataset/tags/'
-
-# for aw in ARTWORK:
-#     tag_dict = {}
-#     with open(PATH_TAG + 'pokemon_tag_' + aw + '.csv', 'r') as f:
-#         tagReader = csv.reader(f)
-#         for row in tagReader:
-#             tag_dict[row[0]] = row
-
-#     list_img_name = listdir(PATH_ORI + '/' + aw)
-    
-#     with open(PATH_TAG + 'pokemon_tag_' + aw + '.csv', 'w', newline = '') as f:
-#         tagWriter = csv.writer(f)
-#         tagWriter.writerow(['filename', 'index', 'name', 'type1', 'type2', 'ability1', 'ability2', 'color'])
-#         for name in list_img_name:
-#             tagWriter.writerow(tag_dict[name[:-4]])
-
-
 TAGS = ['eyes', 'smile', 'chibi', 'mouth', 'tail']
 PATH_JSON = 'illustration2vec/tag_list.json'
 THRESHOLD = 0.1
@@ -159,7 +151,14 @@ i2v_tag_dict = get_tag_values(PATH_JSON, TAGS)
 i2v_tag_dict['smile'] = np.delete(i2v_tag_dict['smile'], 2)
 i2v_tag_dict['tail'] = np.delete(i2v_tag_dict['tail'], [0, 1, 3, 5])
 
-for aw in ARTWORK[2:3]:
+# To better looking the tags, we first list the tags by the order of the pokemon index(shown in the folder of origin image)
+
+# for aw in ARTWORK:
+#     path_csv = PATH_TAG + 'pokemon_tag_' + aw + '.csv'
+#     path_img_folder = PATH_ORI + '/' + aw
+#     order_tags(path_csv, path_img_folder)
+
+for aw in ARTWORK:
     csv_dir = PATH_TAG + 'pokemon_tag_' + aw + '_i2v.csv'
     img_floder = PATH_ORI + '/' + aw
     get_i2v_tags_2csv(csv_dir, img_floder, illust2vec, i2v_tag_dict, THRESHOLD)
