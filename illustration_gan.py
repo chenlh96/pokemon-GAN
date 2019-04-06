@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import util
+import torch.optim as optim
 from custom_layers import bilinear_upsample_deconv2d, minibatch_discrimination
 from torch.utils.data import DataLoader
 
@@ -55,15 +56,15 @@ class generator_fc(nn.Module):
 
 class generator_convt(nn.Module):
 
-    def __init__(self, input_feature_map, dim_output_img=64, n_channel=3):
+    def __init__(self, input_filters, dim_output_img=64, n_channel=3):
         super(generator_convt, self).__init__()
 
         inplace = True
         # init_kernel_sise = int(dim_output_img / (2 ** 4))
         
         # self.bilinear1 = nn.Upsample(scale_factor=2, mode='bilinear')
-        # self.conv1 = nn.Conv2d(input_feature_map, dim_output_img * 8, 5, 1, 2)
-        self.bilinear_deconv1 = bilinear_upsample_deconv2d(2, input_feature_map, dim_output_img * 8, 5, 1, 2)
+        # self.conv1 = nn.Conv2d(input_filters, dim_output_img * 8, 5, 1, 2)
+        self.bilinear_deconv1 = bilinear_upsample_deconv2d(2, input_filters, dim_output_img * 8, 5, 1, 2)
         self.batchnorm1 = nn.BatchNorm2d(dim_output_img*8)
         self.relu1 = nn.ReLU(inplace=inplace)
 
@@ -98,10 +99,13 @@ class generator_convt(nn.Module):
 
 class generator(nn.Module):
 
-    def __init__(self, generator_convt, generator_fc, auxiliary_fc_net):
-        self.convt = generator_convt
-        self.fc = generator_fc
-        self.auxiliary = auxiliary_fc_net
+    def __init__(self, dim_noise=100, dim_output_img=64, n_channel=3):
+        super(generator, self).__init__()
+        num_filter = dim_output_img * 16
+        num_reduce_half = 4
+        self.fc = generator_fc(dim_noise, dim_output_img, num_reduce_half, num_filter)
+        self.convt = generator_convt(num_filter, dim_output_img, n_channel)
+        self.auxiliary = auxiliary_fc_net(dim_noise, dim_output_img, num_reduce_half, num_filter)
 
     def forward(self, x):
         x_fc = self.fc(x)
@@ -197,7 +201,7 @@ def init_weight(layer):
         nn.init.normal_(layer.weight.data, mean=1, std=std)
         nn.init.constant_(layer.bias.data, 0)
 
-def train_illustration(epochs, batch_size, dim_noise, device, dataset, generator, discriminator, loss, loss_auxiliary, optimizer_gen, optimizer_dis, filepath=None):
+def train_base(epochs, batch_size, dim_noise, device, dataset, generator, discriminator, loss, loss_auxiliary, optimizer_gen, optimizer_dis, filepath=None):
     # load the data
     worker = 2
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=worker)
@@ -290,3 +294,25 @@ def train_illustration(epochs, batch_size, dim_noise, device, dataset, generator
     score_list = list(map(list, zip(*score_list)))
         
     return generator, discriminator, loss_list, score_list, img_list
+
+def train(dataset, CONFIG):
+    # CONFIG = config.config_illustration_gan
+
+    net_gen = generator(CONFIG.DIM_NOISE, CONFIG.DIM_IMG).to(CONFIG.DEVICE)
+    net_dis = generator(CONFIG.DIM_IMG).to(CONFIG.DEVICE)
+    print(net_gen)
+    print(net_dis)
+    net_gen.apply(init_weight)
+    net_dis.apply(init_weight)
+
+    loss_main = nn.BCEWithLogitsLoss()
+    loss_aux = nn.MSELoss()
+
+    optim_gen = optim.Adam(net_gen.parameters(), lr=CONFIG.LEARNING_RATE, betas=(CONFIG.MOMENTUM, 0.99))
+    optim_dis = optim.Adam(net_dis.parameters(), lr=CONFIG.LEARNING_RATE, betas=(CONFIG.MOMENTUM, 0.99))
+
+    net_gen, net_dis, losses, _, imgs = train_base(CONFIG.EPOCHS, CONFIG.BATCH_SIZE, CONFIG.DIM_NOISE, CONFIG.DEVICE,
+                                                    dataset, net_gen, net_dis, loss_main, loss_aux, optim_gen, optim_dis, CONFIG.PATH_MODEL)
+    
+    return net_gen, net_dis, losses, imgs
+
