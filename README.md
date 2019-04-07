@@ -25,7 +25,7 @@ The image size we are going to test are: 64 * 64, 128 * 128 and 256 * 256
 ## architeture of gan
 
 - DCGAN: mostly used in generating pokemon
-- illustrationGAN: a famous GAN structure that used to generate anime face
+- illustrationGAN: a famous GAN structure that used to generate anime face, project link is [here](https://github.com/tdrussell/IllustrationGAN)
 - animeGAN: a GAN that used to generate high resolution anime gan, we found it in this [paper](https://arxiv.org/pdf/1708.05509.pdf), this GAN is based on DRFGAN, ResNet
 
 ## Implementation

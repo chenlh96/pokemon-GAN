@@ -213,7 +213,7 @@ def train_base(epochs, batch_size, dim_noise, device, dataset, generator, discri
     # create the list to store each loss
     loss_list, score_list, img_list = [], [], []
     num_fixed_ns_img = 64
-    fixed_noise = torch.randn(num_fixed_ns_img, dim_noise, 1, 1, device=device)
+    fixed_noise = torch.randn(num_fixed_ns_img, dim_noise, device=device)
 
     # start iterating the epoch
     for e in range(epochs):
@@ -287,7 +287,8 @@ def train_base(epochs, batch_size, dim_noise, device, dataset, generator, discri
         loss_list.append([loss_dis, loss_gen])
         score_list.append([score_dis_fake, score_dis_real, score_gen])
         # store the image that the generator create for each epoch
-        test_img = generator(fixed_noise).detach().cpu()
+        test_img, _ = generator(fixed_noise)
+        test_img = test_img.detach().cpu()
         img_list.append(test_img.numpy())
 
         # save the model
