@@ -131,24 +131,24 @@ class discriminator(nn.Module):
 
         self.do2 = nn.Dropout(p=proba, inplace=inplace)
         self.conv2 = nn.Conv2d(dim_input_img, dim_input_img * 2, 5, 1, 2, bias=False)
-        self.batchnorm2 = nn.BatchNorm2d(dim_input_img * 2)
+        self.batchnorm2 = nn.BatchNorm2d(int(dim_input_img * 2 / 2)) # maxpool need to /2
         self.lrelu2 = nn.LeakyReLU(negative_slope=slope, inplace=True)
         self.maxpool2 = nn.MaxPool2d(kernel_size=2, stride=2)
  
         self.do3 = nn.Dropout(p=proba, inplace=inplace)
         self.conv3 = nn.Conv2d(dim_input_img * 2, dim_input_img * 4, 5, 1, 2, bias=False)
-        self.batchnorm3 = nn.BatchNorm2d(dim_input_img * 4)
+        self.batchnorm3 = nn.BatchNorm2d(int(dim_input_img * 4 / 2))
         self.lrelu3 = nn.LeakyReLU(negative_slope=slope, inplace=True)
         self.maxpool3 = nn.MaxPool2d(kernel_size=2, stride=2)
  
         self.do4 = nn.Dropout(p=proba, inplace=inplace)
         self.conv4 = nn.Conv2d(dim_input_img * 4, dim_input_img * 8, 5, 1, 2, bias=False)
-        self.batchnorm4 = nn.BatchNorm2d(dim_input_img * 8)
+        self.batchnorm4 = nn.BatchNorm2d(int(dim_input_img * 8 / 2))
         self.lrelu4 = nn.LeakyReLU(negative_slope=slope, inplace=True)
         self.maxpool4 = nn.MaxPool2d(kernel_size=2, stride=2)
 
         dim_output_feature = 100
-        dim_c = 1000
+        dim_c = 10
         dim_feature_map = int(dim_input_img / (2 ** 4))
         # assert dim_feature_map == 4
 
@@ -170,12 +170,12 @@ class discriminator(nn.Module):
 
     def forward(self, x):
         x = self.maxpool1(self.lrelu1(self.conv1(x)))
-        x = self.do2(self.batchnorm2(self.conv2(x)))
-        x = self.lrelu2(self.maxpool2(x))
-        x = self.do3(self.batchnorm3(self.conv3(x)))
-        x = self.lrelu3(self.maxpool3(x))
-        x = self.do4(self.batchnorm4(self.conv4(x)))
-        x = self.lrelu4(self.maxpool4(x))
+        x = self.conv2(self.batchnorm2(self.do2(x)))
+        x = self.maxpool2(self.lrelu2(x))
+        x = self.conv3(self.batchnorm3(self.do3(x)))
+        x = self.maxpool3(self.lrelu3(x))
+        x = self.conv4(self.batchnorm4(self.do4(x)))
+        x = self.maxpool4(self.lrelu4(x))
 
         x = x.view(-1, self.flatten_size)
         x_mini_dis = self.miniDis(x)
@@ -197,11 +197,13 @@ def init_weight(layer):
         nn.init.normal_(layer.weight.data, mean=0, std=std)
     elif type(layer) == nn.Linear:
         nn.init.normal_(layer.weight.data, mean=0, std=std)
-    elif type(layer) == bilinear_upsample_deconv2d:
-        nn.init.normal_(layer.weight.data, mean=0, std=std)
+        nn.init.normal_(layer.bias.data, mean=0, std=std)
+    elif type(layer) == minibatch_discrimination:
+         nn.init.normal_(layer.weight.data, mean=0, std=std)
     elif type(layer) == nn.BatchNorm2d:
         nn.init.normal_(layer.weight.data, mean=1, std=std)
         nn.init.constant_(layer.bias.data, 0)
+
 
 def train_base(epochs, batch_size, dim_noise, device, dataset, generator, discriminator, loss, loss_auxiliary, optimizer_gen, optimizer_dis, filepath=None):
     # load the data

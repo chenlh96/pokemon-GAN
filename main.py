@@ -23,7 +23,6 @@ def main():
     # create the dataset
     dataset = pokemonDataset(PATH_IMAGE, PATH_TAG, ['ken sugimori'], IS_ADD_I2V_TAG)
 
-
     # mean, std = dset.get_channel_mean_std(dataset, DIM_IMG)
     # mean = [220.43362509, 217.50907014, 212.78514176]
     # std = [71.7985852,  73.64374336, 78.23258064]
@@ -39,6 +38,7 @@ def main():
     net_gen, net_dis = illust.build_gen_dis(CONFIG)
     print(net_gen)
     print(net_dis)
+    
     net_gen, net_dis, losses, imgs = illust.train(dataset, net_gen, net_dis, CONFIG)
 
     plt.figure(figsize=(20, 10))

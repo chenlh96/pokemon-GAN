@@ -123,7 +123,7 @@ PATH_DATASET = 'C:/Users/Leheng Chen/Desktop/HKUST/pokemon-GAN/pokemon_dataset/i
 ORI_TYPE = 'ori'
 AUGMENTATION_TYPE = ['flip', 'left rotation', 'right roration', 'contrast', 'saturation']
 
-DIMENSION = 64
+DIMENSION = 256
 DEGREE_OF_ROTATE = 15
 CONTRAST = 3
 SATURATION = 1.5
