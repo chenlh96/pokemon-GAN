@@ -20,14 +20,13 @@ class auxiliary_fc_net(nn.Module):
         self.relu1 = nn.ReLU(inplace=True)
         self.relu2 = nn.ReLU(inplace=True)
         self.relu3 = nn.ReLU(inplace=True)
-        self.relu4 = nn.ReLU(inplace=True)
     
     def forward(self, x):
         x = x.view(-1, self.dim_imput)
         x = self.relu1(self.fc1(x))
         x = self.relu2(self.fc2(x))
         x = self.relu3(self.fc3(x))
-        x = self.relu4(self.fc4(x))
+        x = self.fc4(x)
         return x
 
 class generator_fc(nn.Module):
@@ -81,7 +80,6 @@ class generator_convt(nn.Module):
         self.batchnorm4 = nn.BatchNorm2d(dim_output_img)
         self.relu4 = nn.ReLU(inplace=inplace)
 
-
         self.conv = nn.Conv2d(dim_output_img, n_channel, 5, 1, 2, bias=False)
         self.tanh = nn.Tanh()
 
@@ -96,7 +94,6 @@ class generator_convt(nn.Module):
         x = self.relu4(x)
         x = self.tanh(self.conv(x))
         return x
-
 
 class generator(nn.Module):
 
@@ -129,19 +126,19 @@ class discriminator(nn.Module):
         self.lrelu1 = nn.LeakyReLU(negative_slope=slope, inplace=True)
         self.maxpool1 = nn.MaxPool2d(kernel_size=2, stride=2)
 
-        self.do2 = nn.Dropout(p=proba, inplace=inplace)
+        self.do2 = nn.Dropout2d(p=proba, inplace=inplace)
         self.conv2 = nn.Conv2d(dim_input_img, dim_input_img * 2, 5, 1, 2, bias=False)
         self.batchnorm2 = nn.BatchNorm2d(int(dim_input_img * 2 / 2)) # maxpool need to /2
         self.lrelu2 = nn.LeakyReLU(negative_slope=slope, inplace=True)
         self.maxpool2 = nn.MaxPool2d(kernel_size=2, stride=2)
  
-        self.do3 = nn.Dropout(p=proba, inplace=inplace)
+        self.do3 = nn.Dropout2d(p=proba, inplace=inplace)
         self.conv3 = nn.Conv2d(dim_input_img * 2, dim_input_img * 4, 5, 1, 2, bias=False)
         self.batchnorm3 = nn.BatchNorm2d(int(dim_input_img * 4 / 2))
         self.lrelu3 = nn.LeakyReLU(negative_slope=slope, inplace=True)
         self.maxpool3 = nn.MaxPool2d(kernel_size=2, stride=2)
  
-        self.do4 = nn.Dropout(p=proba, inplace=inplace)
+        self.do4 = nn.Dropout2d(p=proba, inplace=inplace)
         self.conv4 = nn.Conv2d(dim_input_img * 4, dim_input_img * 8, 5, 1, 2, bias=False)
         self.batchnorm4 = nn.BatchNorm2d(int(dim_input_img * 8 / 2))
         self.lrelu4 = nn.LeakyReLU(negative_slope=slope, inplace=True)
@@ -164,8 +161,9 @@ class discriminator(nn.Module):
         self.fc3 = nn.Linear(fc_size, fc_size)
         self.lrelu_fc3 = nn.LeakyReLU(negative_slope=slope, inplace=inplace)
 
-        self.fc4 = nn.Linear(fc_size + self.flatten_size + dim_output_feature, 1)
-        self.lrelu_fc4 = nn.LeakyReLU(negative_slope=slope)
+        self.fc4 = nn.Linear(fc_size + dim_output_feature, 1)
+        # self.fc4 = nn.Linear(fc_size + self.flatten_size + dim_output_feature, 1)
+        # self.lrelu_fc4 = nn.LeakyReLU(negative_slope=slope)
  
 
     def forward(self, x):
@@ -185,7 +183,7 @@ class discriminator(nn.Module):
         x = self.lrelu_fc3(self.fc3(x))
 
         x = torch.cat([x, x_mini_dis], 1)
-        x = self.lrelu_fc4(self.fc4(x))
+        x = self.fc4(x)
 
         return x
 

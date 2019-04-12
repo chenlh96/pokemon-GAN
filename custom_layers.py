@@ -37,6 +37,6 @@ class minibatch_discrimination(nn.Module):
         output = torch.exp(-torch.abs(mat - mat_T).sum(3))
         output = output.sum(0) + self.bias
 
-        output = torch.cat([x, output], 1)
+        # output = torch.cat([x, output], 1)
         return output
 
