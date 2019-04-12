@@ -171,7 +171,7 @@ class animeFaceDataset(Dataset):
         
         return sample
 
-class fmnist:
+class fmnist(Dataset):
 
     def __init__(self, root_dir, download, image_size = 64):
         self.root = root_dir
@@ -185,12 +185,9 @@ class fmnist:
     def __len__(self):
         return len(self.f_mnist_train) + len(self.f_mnist_test)
 
-    def __getitem(self, idx):
+    def __getitem__(self, idx):
         if idx < len(self.f_mnist_train):
-            return [self.f_mnist_train[idx]]
+            return self.f_mnist_train[idx]
         else:
-            return [self.f_mnist_test[idx-len(self.f_mnist_train)]]
-
-
-
+            return self.f_mnist_test[idx-len(self.f_mnist_train)]
 

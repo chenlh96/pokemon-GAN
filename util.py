@@ -23,7 +23,16 @@ def load_checkpoint(epoch, generator, discriminator, path):
     discriminator.load_state_dict(checkpoint['discriminator'])
     return generator, discriminator
 
-def make_figure_grid(img, grid_size, vmin=None, vmax=None):
+def imshow(img_tensor):
+    img = img_tensor.numpy()
+    img = np.transpose(img, [1, 2, 0])
+    if (img.shape[2] == 1):
+        img = np.squeeze(img, axis = 2)
+    plt.figure()
+    plt.imshow(img)
+    plt.show()
+
+def make_figure_grid(img, grid_size, vmin=None, vmax=None, bright=0):
     assert type(img) == torch.Tensor or type(img) == np.ndarray
     if type(img) == np.ndarray:
         nc = np.argmin(img.shape[1:])
@@ -31,7 +40,7 @@ def make_figure_grid(img, grid_size, vmin=None, vmax=None):
             img = np.transpose(img, (0, nc, 1, 2))
         img = torch.from_numpy(img)
     assert img.size(0) <= grid_size ** 2
-    grid_img = torchvision.utils.make_grid(img, nrow=grid_size).detach().cpu()
+    grid_img = torchvision.utils.make_grid(img + bright, nrow=grid_size).detach().cpu()
     grid_img_np = np.transpose(grid_img.numpy(), (1, 2, 0))
     return grid_img_np
 
