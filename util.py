@@ -12,7 +12,6 @@ def save_checkpoint(epoch, generator, discriminator, filepath):
     if 'pth' in filepath:
         len_ext = 3
     ext = filepath[-(len_ext + 1):]
-    print(ext)
     filename = filepath[: - (len_ext + 1)] + '_epoch_%d' % epoch
     filename = filename + ext
     torch.save({'generator': generator.state_dict(), 'discriminator': discriminator.state_dict()}, filename)
@@ -31,7 +30,6 @@ def make_figure_grid(img, grid_size, vmin=None, vmax=None):
         if nc == 3:
             img = np.transpose(img, (0, nc, 1, 2))
         img = torch.from_numpy(img)
-        print(img.size(0))
     assert img.size(0) <= grid_size ** 2
     grid_img = torchvision.utils.make_grid(img, nrow=grid_size).detach().cpu()
     grid_img_np = np.transpose(grid_img.numpy(), (1, 2, 0))

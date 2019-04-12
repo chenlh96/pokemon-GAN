@@ -25,6 +25,7 @@ class minibatch_discrimination(nn.Module):
         self.output_feature = dim_output_feature
         self.c = c
         self.weight = nn.Parameter(torch.empty(self.input_feture, self.output_feature * self.c))
+        self.bias = nn.Parameter(torch.empty(self.output_feature))
         
     def forward(self, x):
         x = x.view(-1, self.input_feture)
@@ -34,7 +35,7 @@ class minibatch_discrimination(nn.Module):
         mat = mat.unsqueeze(0)
         mat_T = mat.permute(1, 0, 2, 3)
         output = torch.exp(-torch.abs(mat - mat_T).sum(3))
-        output = output.sum(0)
+        output = output.sum(0) + self.bias
 
         output = torch.cat([x, output], 1)
         return output

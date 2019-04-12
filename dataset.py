@@ -1,6 +1,6 @@
 import torch
 from torch.utils.data import Dataset
-from torchvision import transforms
+from torchvision import transforms, datasets
 from os import listdir
 import os
 import csv
@@ -139,5 +139,58 @@ class pokemonDataset(Dataset):
 
                 for img, tag in zip(list_img, list_tag):
                     path_img_spec = path_img + '/' + img
-                    self.sample_dir.append([path_img_spec] + tag)   
+                    self.sample_dir.append([path_img_spec] + tag)
+
+class animeFaceDataset(Dataset):
+    def __init__(self, image_dir, transform=None):
+        self.image_dir = image_dir
+        folder_list = listdir(self.image_dir)
+        self.img_dir = []
+        self.transform = transform
+
+        for folder in folder_list:
+            folder_dir = self.image_dir + '/' + folder
+            if not os.path.isdir(folder_dir):
+                continue
+            
+            file_list = listdir(folder_dir)
+            for file in file_list:
+                file_dir = folder_dir + '/' + file
+                self.img_dir.append(file_dir)
+
+    def __len__(self):
+        return len(self.img_dir)
+
+    def __getitem__(self, idx):
+        sel_sample = self.img_dir[idx]
+        with Image.open(sel_sample[0], 'r') as img:
+            img_2arr = np.asarray(img)
+        
+        if self.transform:
+            sample = self.transform(img_2arr)
+        
+        return sample
+
+class fmnist:
+
+    def __init__(self, root_dir, download, image_size = 64):
+        self.root = root_dir
+        self.download = download
+        self.transform = [transforms.Resize(image_size), transforms.ToTensor()]
+        transform_composite=transforms.Compose(self.transform)
+
+        self.f_mnist_train = datasets.FashionMNIST(self.root + '/train/', train=True, download=self.download, transform=transform_composite)
+        self.f_mnist_test = datasets.FashionMNIST(self.root + '/test/', train=False, download=self.download, transform=transform_composite)
+
+    def __len__(self):
+        return len(self.f_mnist_train) + len(self.f_mnist_test)
+
+    def __getitem(self, idx):
+        if idx < len(self.f_mnist_train):
+            return [self.f_mnist_train[idx]]
+        else:
+            return [self.f_mnist_test[idx-len(self.f_mnist_train)]]
+
+
+
 
