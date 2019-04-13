@@ -13,7 +13,9 @@ def get_channel_mean_std(dataset, dim_img, channel=3):
     for i in range(len(dataset)):
         img = dataset[i][0]
         if type(img) == torch.Tensor:
-            img = np.transpose(img.numpy(), (1,2,0))
+            img = np.transpose(img.numpy(), (1, 2, 0))
+        else:
+            img = np.asarray(img)
         for j in range(channel):
             mean[j] += np.sum(img[:,:, j])
     mean /= dim_img ** 2 * len(dataset)
@@ -28,8 +30,9 @@ def get_channel_mean_std(dataset, dim_img, channel=3):
     std = np.sqrt(std)
     return mean, std   
 
+"""
 class ToDoubleTensor(object):
-    """Convert ndarrays in sample to Tensors."""
+    # Convert ndarrays in sample to Tensors.
 
     def __call__(self, sample):
         image, tags = sample[0], sample[1]
@@ -58,6 +61,7 @@ class Normalize(object):
             # it may be a tensor from torch, or a n-dim array form numpy
             new_img[i,:,:].add_((image[i,:,:] - self.mean[i]) / (self.std[i] + 1))     
         return (new_img, tags)
+"""
 
 class pokemonDataset(Dataset):
     def __init__(self, image_dir, tag_dir, artwork_types=None, augmentation_types=None, is_add_i2v_tag=False, transform=None):
@@ -85,12 +89,12 @@ class pokemonDataset(Dataset):
 
     def __getitem__(self, idx):
         sel_sample = self.sample_dir[idx]
-        with Image.open(sel_sample[0], 'r') as img:
-            img_2arr = np.asarray(img)
-        sample = (img_2arr, sel_sample[1:])
+        img = Image.open(sel_sample[0], 'r')
+        
         if self.transform:
-            sample = self.transform(sample)
-        return sample
+            img = self.transform(img)
+        sel_sample = (img, sel_sample[1:])
+        return sel_sample
     
     def set_transform(self, transform):
         if self.transform == None:
@@ -154,22 +158,22 @@ class animeFaceDataset(Dataset):
                 continue
             
             file_list = listdir(folder_dir)
-            for file in file_list:
-                file_dir = folder_dir + '/' + file
-                self.img_dir.append(file_dir)
+            if len(file_list) != 0:
+                for file in file_list:
+                    file_dir = folder_dir + '/' + file
+                    self.img_dir.append(file_dir)
 
     def __len__(self):
         return len(self.img_dir)
 
     def __getitem__(self, idx):
         sel_sample = self.img_dir[idx]
-        with Image.open(sel_sample[0], 'r') as img:
-            img_2arr = np.asarray(img)
+        img = Image.open(sel_sample, 'r')
         
-        if self.transform:
-            sample = self.transform(img_2arr)
+        if self.transform != None:
+            img = self.transform(img)
         
-        return sample
+        return [img]
 
 class fmnist(Dataset):
 

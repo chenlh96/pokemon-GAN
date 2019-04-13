@@ -53,7 +53,7 @@ class discriminator(nn.Module):
 
         slope = 0.2
         inplace = True
-        num_reduce_half=4
+        num_reduce_half=5
         final_ker_size = int(dim_input_img / (2**num_reduce_half))
         
         self.conv1 = nn.Conv2d(n_channel, dim_input_img, 4, 2,1, bias=False)
@@ -144,13 +144,13 @@ class discriminator_128(nn.Module):
         self.conv3 = nn.Conv2d(dim_input_img * 2, dim_input_img * 4, 4, 2,1, bias=False)
         self.selu3 = nn.SELU(inplace=inplace)
 
-        self.conv5 = nn.Conv2d(dim_input_img * 4, dim_input_img * 8, 4, 2,1, bias=False)
+        self.conv4 = nn.Conv2d(dim_input_img * 4, dim_input_img * 8, 4, 2,1, bias=False)
+        self.selu4 = nn.SELU(inplace=inplace)
+
+        self.conv5 = nn.Conv2d(dim_input_img * 8, dim_input_img * 16, 4, 2,1, bias=False)
         self.selu5 = nn.SELU(inplace=inplace)
 
-        self.conv5 = nn.Conv2d(dim_input_img * 4, dim_input_img * 8, 4, 2,1, bias=False)
-        self.selu5 = nn.SELU(inplace=inplace)
-
-        self.conv6 = nn.Conv2d(dim_input_img * 8, 1, final_ker_size, 1, 0, bias=False)
+        self.conv6 = nn.Conv2d(dim_input_img * 16, 1, final_ker_size, 1, 0, bias=False)
         self.sig = nn.Sigmoid()
 
     def forward(self, x):
@@ -269,10 +269,10 @@ def train_base(epochs, batch_size, dim_noise, device, dataset, generator, discri
 
 def build_gen_dis(config):
     if config.DIM_IMG == 64:
-        net_gen = generator(config.DIM_NOISE, config.DIM_IMG).to(config.DEVICE)
+        net_gen = generator(config.DIM_NOISE, config.DIM_IMG, config.N_CHANNEL).to(config.DEVICE)
         net_dis = discriminator(config.DIM_IMG).to(config.DEVICE)
     elif config.DIM_IMG == 128:
-        net_gen = generator_128(config.DIM_NOISE, config.DIM_IMG).to(config.DEVICE)
+        net_gen = generator_128(config.DIM_NOISE, config.DIM_IMG, config.N_CHANNEL).to(config.DEVICE)
         net_dis = discriminator_128(config.DIM_IMG).to(config.DEVICE)
 
     if config.INIT:
@@ -280,7 +280,7 @@ def build_gen_dis(config):
         net_dis.apply(init_weight)
     else:
         ext = config.PATH_MODEL[-4]
-        path_model = config.PATH_MODEL[:-4] + '_epoch_%d' + ext % config.IMPORT_IDX_EPOCH
+        path_model = config.PATH_IMPORT_MODEL[:-4] + '_epoch_%d' + ext % config.IMPORT_IDX_EPOCH
         net_gen, net_dis = util.load_checkpoint(config.EPOCHS, net_gen, net_dis, path_model)
 
     return net_gen, net_dis

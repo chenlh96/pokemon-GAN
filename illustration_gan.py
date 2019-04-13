@@ -299,11 +299,16 @@ def train_base(epochs, batch_size, dim_noise, device, dataset, generator, discri
     return generator, discriminator, loss_list, score_list, img_list
 
 def build_gen_dis(config):
-    net_gen = generator(config.DIM_NOISE, config.DIM_IMG).to(config.DEVICE)
-    net_dis = discriminator(config.DIM_IMG).to(config.DEVICE)
+    net_gen = generator(config.DIM_NOISE, config.DIM_IMG, config.N_CHANNEL).to(config.DEVICE)
+    net_dis = discriminator(config.DIM_IMG, config.N_CHANNEL).to(config.DEVICE)
 
-    net_gen.apply(init_weight)
-    net_dis.apply(init_weight)
+    if config.INIT:
+        net_gen.apply(init_weight)
+        net_dis.apply(init_weight)
+    else:
+        ext = config.PATH_MODEL[-4]
+        path_model = config.PATH_IMPORT_MODEL[:-4] + '_epoch_%d' + ext % config.IMPORT_IDX_EPOCH
+        net_gen, net_dis = util.load_checkpoint(config.EPOCHS, net_gen, net_dis, path_model)
 
     return net_gen, net_dis
 
