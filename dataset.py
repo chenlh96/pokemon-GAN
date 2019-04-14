@@ -160,8 +160,9 @@ class animeFaceDataset(Dataset):
             file_list = listdir(folder_dir)
             if len(file_list) != 0:
                 for file in file_list:
-                    file_dir = folder_dir + '/' + file
-                    self.img_dir.append(file_dir)
+                    if file[0] != '.':
+                        file_dir = folder_dir + '/' + file
+                        self.img_dir.append(file_dir)
 
     def __len__(self):
         return len(self.img_dir)

@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import util
 import torch.optim as optim
+import custom_layers as op
 from torch.utils.data import DataLoader
 
 class generator(nn.Module):
@@ -12,37 +13,25 @@ class generator(nn.Module):
         inplace = True
         num_reduce_half=4
         init_kernel_sise = int(dim_output_img / (2 ** num_reduce_half))
-        
-        self.conv_trans_2d1 = nn.ConvTranspose2d(dim_noise, dim_output_img*8, init_kernel_sise, 1, 0, bias=False)
-        self.batchnorm1 = nn.BatchNorm2d(dim_output_img*8)
+
+        self.bn_t_conv1 = op.bn_transpose_conv2d(dim_noise, dim_output_img*8, init_kernel_sise, 1, 0)
         self.relu1 = nn.ReLU(inplace=inplace)
-
-        self.conv_trans_2d2 = nn.ConvTranspose2d(dim_output_img*8, dim_output_img*4, 4, 2,1, bias=False)
-        self.batchnorm2 = nn.BatchNorm2d(dim_output_img*4)
+        self.bn_t_conv2 = op.bn_transpose_conv2d(dim_output_img*8, dim_output_img*4, 4, 2,1)
         self.relu2 = nn.ReLU(inplace=inplace)
-
-        self.conv_trans_2d3 = nn.ConvTranspose2d(dim_output_img*4, dim_output_img*2,  4,2,1, bias=False)
-        self.batchnorm3 = nn.BatchNorm2d(dim_output_img*2)
+        self.bn_t_conv3 = op.bn_transpose_conv2d(dim_output_img*4, dim_output_img*2, 4, 2,1)
         self.relu3 = nn.ReLU(inplace=inplace)
-
-        self.conv_trans_2d4 = nn.ConvTranspose2d(dim_output_img*2, dim_output_img, 4,2,1, bias=False)
-        self.batchnorm4 = nn.BatchNorm2d(dim_output_img)
+        self.bn_t_conv4 = op.bn_transpose_conv2d(dim_output_img*2, dim_output_img, 4, 2,1)
         self.relu4 = nn.ReLU(inplace=inplace)
 
-        # self.conv_trans_2d5 = nn.ConvTranspose2d(dim_output_img, dim_output_img, 4,2,1, bias=False)
-        # self.batchnorm5 = nn.BatchNorm2d(dim_output_img)
-        # self.relu5 = nn.ReLU(inplace=inplace)
-
-        self.conv_trans_2d6 = nn.ConvTranspose2d(dim_output_img, n_channel, 4,2,1, bias=False)
+        self.t_conv = nn.ConvTranspose2d(dim_output_img, n_channel, 4,2,1, bias=False)
         self.tanh = nn.Tanh()
 
     def forward(self, x):
-        x = self.relu1(self.batchnorm1(self.conv_trans_2d1(x)))
-        x = self.relu2(self.batchnorm2(self.conv_trans_2d2(x)))
-        x = self.relu3(self.batchnorm3(self.conv_trans_2d3(x)))
-        x = self.relu4(self.batchnorm4(self.conv_trans_2d4(x)))
-        # x = self.relu5(self.batchnorm5(self.conv_trans_2d5(x)))
-        x = self.tanh(self.conv_trans_2d6(x))
+        x = self.relu1(self.bn_t_conv1(x))
+        x = self.relu2(self.bn_t_conv2(x))
+        x = self.relu3(self.bn_t_conv3(x))
+        x = self.relu4(self.bn_t_conv4(x))
+        x = self.tanh(self.t_conv(x))
         return x
 
 
@@ -53,39 +42,27 @@ class discriminator(nn.Module):
 
         slope = 0.2
         inplace = True
-        num_reduce_half=5
-        final_ker_size = int(dim_input_img / (2**num_reduce_half))
+        num_reduce_half=4
+        final_ker_size = int(dim_input_img / (2 ** num_reduce_half))
         
-        self.conv1 = nn.Conv2d(n_channel, dim_input_img, 4, 2,1, bias=False)
-        self.batchnorm1 = nn.BatchNorm2d(dim_input_img)
+        self.bn_conv1 = op.bn_conv2d(n_channel, dim_input_img, 4, 2,1)
         self.lrelu1 = nn.LeakyReLU(negative_slope=slope, inplace=inplace)
-
-        self.conv2 = nn.Conv2d(dim_input_img, dim_input_img * 2, 4, 2,1, bias=False)
-        self.batchnorm2 = nn.BatchNorm2d(dim_input_img * 2)
+        self.bn_conv2 = op.bn_conv2d(dim_input_img, dim_input_img * 2, 4, 2,1)
         self.lrelu2 = nn.LeakyReLU(negative_slope=slope, inplace=inplace)
-
-        self.conv3 = nn.Conv2d(dim_input_img * 2, dim_input_img * 4, 4, 2,1, bias=False)
-        self.batchnorm3 = nn.BatchNorm2d(dim_input_img * 4)
+        self.bn_conv3 = op.bn_conv2d(dim_input_img * 2, dim_input_img * 4, 4, 2, 1)
         self.lrelu3 = nn.LeakyReLU(negative_slope=slope, inplace=inplace)
+        self.bn_conv4 = op.bn_conv2d(dim_input_img * 4, dim_input_img * 8, 4, 2, 1)
+        self.lrelu4 = nn.LeakyReLU(negative_slope=slope, inplace=inplace)
 
-        # self.conv4 = nn.Conv2d(dim_input_img * 4, dim_input_img * 4, 4, 2,1, bias=False)
-        # self.batchnorm4 = nn.BatchNorm2d(dim_input_img * 4)
-        # self.lrelu4 = nn.LeakyReLU(negative_slope=slope, inplace=inplace)
-
-        self.conv5 = nn.Conv2d(dim_input_img * 4, dim_input_img * 8, 4, 2,1, bias=False)
-        self.batchnorm5 = nn.BatchNorm2d(dim_input_img * 8)
-        self.lrelu5 = nn.LeakyReLU(negative_slope=slope, inplace=inplace)
-
-        self.conv6 = nn.Conv2d(dim_input_img * 8, 1, final_ker_size, 1, 0, bias=False)
+        self.conv = nn.Conv2d(dim_input_img * 8, 1, final_ker_size, 1, 0, bias=False)
         self.sig = nn.Sigmoid()
 
     def forward(self, x):
-        x = self.lrelu1(self.batchnorm1(self.conv1(x)))
-        x = self.lrelu2(self.batchnorm2(self.conv2(x)))
-        x = self.lrelu3(self.batchnorm3(self.conv3(x)))
-        # x = self.lrelu4(self.batchnorm4(self.conv4(x)))
-        x = self.lrelu5(self.batchnorm5(self.conv5(x)))
-        x = self.sig(self.conv6(x))
+        x = self.lrelu1(self.bn_conv1(x))
+        x = self.lrelu2(self.bn_conv2(x))
+        x = self.lrelu3(self.bn_conv3(x))
+        x = self.lrelu4(self.bn_conv4(x))
+        x = self.sig(self.conv(x))
         return x
 
 class generator_128(nn.Module):
