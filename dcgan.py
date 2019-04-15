@@ -76,19 +76,14 @@ class generator_128(nn.Module):
         
         self.conv_trans_2d0 = nn.ConvTranspose2d(dim_noise, dim_output_img*16, init_kernel_sise, 1, 0, bias=False)
         self.selu0 = nn.SELU(inplace=inplace)
-        
         self.conv_trans_2d1 = nn.ConvTranspose2d(dim_output_img*16, dim_output_img*8, 4, 2, 1, bias=False)
         self.selu1 = nn.SELU(inplace=inplace)
-
         self.conv_trans_2d2 = nn.ConvTranspose2d(dim_output_img*8, dim_output_img*4, 4, 2,1, bias=False)
         self.selu2 = nn.SELU(inplace=inplace)
-
         self.conv_trans_2d3 = nn.ConvTranspose2d(dim_output_img*4, dim_output_img*2,  4,2,1, bias=False)
         self.selu3 = nn.SELU(inplace=inplace)
-
         self.conv_trans_2d4 = nn.ConvTranspose2d(dim_output_img*2, dim_output_img, 4,2,1, bias=False)
         self.selu4 = nn.SELU(inplace=inplace)
-
         self.conv_trans_2d6 = nn.ConvTranspose2d(dim_output_img, n_channel, 4,2,1, bias=False)
         self.tanh = nn.Tanh()
 
@@ -114,19 +109,14 @@ class discriminator_128(nn.Module):
         
         self.conv1 = nn.Conv2d(n_channel, dim_input_img, 4, 2,1, bias=False)
         self.selu1 = nn.SELU(inplace=inplace)
-
         self.conv2 = nn.Conv2d(dim_input_img, dim_input_img * 2, 4, 2,1, bias=False)
         self.selu2 = nn.SELU(inplace=inplace)
-
         self.conv3 = nn.Conv2d(dim_input_img * 2, dim_input_img * 4, 4, 2,1, bias=False)
         self.selu3 = nn.SELU(inplace=inplace)
-
         self.conv4 = nn.Conv2d(dim_input_img * 4, dim_input_img * 8, 4, 2,1, bias=False)
         self.selu4 = nn.SELU(inplace=inplace)
-
         self.conv5 = nn.Conv2d(dim_input_img * 8, dim_input_img * 16, 4, 2,1, bias=False)
         self.selu5 = nn.SELU(inplace=inplace)
-
         self.conv6 = nn.Conv2d(dim_input_img * 16, 1, final_ker_size, 1, 0, bias=False)
         self.sig = nn.Sigmoid()
 

@@ -34,7 +34,7 @@ class generator_main(nn.Module):
 
         inplace = True
         fc_size = 1024
-        self.reshape_params = [-1, dim_filter, dim_filter, num_filter]
+        self.reshape_params = [-1, num_filter, dim_filter, dim_filter]
 
         self.fc1 = nn.Linear(dim_noise, fc_size)
         self.relu_fc1 = nn.ReLU(inplace=inplace)
@@ -70,7 +70,7 @@ class generator_main(nn.Module):
         x_conv = self.relu4(self.bn_bilr_deconv4(x_conv))
         x_conv = self.tanh(self.conv(x_conv))
 
-        return x, x_conv
+        return x_conv, x
 
 class generator(nn.Module):
 
@@ -82,7 +82,7 @@ class generator(nn.Module):
         self.auxiliary = auxiliary_fc_net(dim_noise, dim_filter, dim_output_img * 16)
 
     def forward(self, x):
-        x_fc, x_data = self.gen_main(x)
+        x_data, x_fc = self.gen_main(x)
         x_id = self.auxiliary(x_fc)
         return x_data, x_id
 
@@ -167,6 +167,7 @@ def init_weight(layer):
         nn.init.normal_(layer.bias.data, mean=0, std=std)
     elif type(layer) == op.minibatch_discrimination:
          nn.init.normal_(layer.weight.data, mean=0, std=std)
+         nn.init.constant_(layer.bias.data, 0)
     elif type(layer) == nn.BatchNorm2d:
         nn.init.normal_(layer.weight.data, mean=1, std=std)
         nn.init.constant_(layer.bias.data, 0)

@@ -5,7 +5,7 @@ import torch.nn as nn
 class bn_conv2d(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0):
         super(bn_conv2d, self).__init__()
-        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, stride=1, padding=0, bias=False)
+        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, stride=stride, padding=padding, bias=False)
         self.bn = nn.BatchNorm2d(out_channels)
 
     def forward(self, x):
@@ -15,7 +15,7 @@ class bn_conv2d(nn.Module):
 class bn_transpose_conv2d(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0):
         super(bn_transpose_conv2d, self).__init__()
-        self.conv_t = nn.ConvTranspose2d(in_channels, out_channels, kernel_size, stride=1, padding=0, bias=False)
+        self.conv_t = nn.ConvTranspose2d(in_channels, out_channels, kernel_size, stride=stride, padding=padding, bias=False)
         self.bn = nn.BatchNorm2d(out_channels)
 
     def forward(self, x):
@@ -73,11 +73,12 @@ class minibatch_discrimination(nn.Module):
 
 class sr_resBlock(nn.Module):
     
-    def __init__(self, in_channels, out_channels):
-        self.conv1 = nn.Conv2d(in_channels, 64, 3, 1)
-        self.bn1 = nn.BatchNorm2d(64)
+    def __init__(self, in_channels, out_channels=64, kernel_size=3, stride=1, padding=1):
+        super(sr_resBlock, self).__init__()
+        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding)
+        self.bn1 = nn.BatchNorm2d(out_channels)
         self.prelu = nn.PReLU()
-        self.conv2 = nn.Conv2d(64, out_channels, 3, 1)
+        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size, stride, padding)
         self.bn2 = nn.BatchNorm2d(out_channels)
 
     def forward(self, x):
@@ -88,10 +89,37 @@ class sr_resBlock(nn.Module):
         return x
 
 
-class pixel_shuffle_deconv2d(nn.Module):
-    pass
+class sub_pixel_cnn(nn.Module):
+    def __init__(self, scale_factor, in_channels, out_channels=256, kernel_size=3, stride=1, padding=1):
+        super(sub_pixel_cnn, self).__init__()
+        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding)
+        self.pshuffle = nn.PixelShuffle(scale_factor)
+        self.bn = nn.BatchNorm2d(int(out_channels / (scale_factor ** 2)))
+        self.relu = nn.ReLU(inplace=True)
+    
+    def forward(self, x):
+        x = self.pshuffle(self.conv(x))
+        x = self.relu(self.bn(x))
+        return x
 
 
-class srgan_dis_resBlock(nn.Module):
-    pass
+class dis_resBlock(nn.Module):
+    def __init__(self, in_channels=32, out_channels=256, kernel_size=3, stride=1, padding=1, activate_before_addition=True):
+        super(dis_resBlock, self).__init__()
+        self.add_activate = activate_before_addition
+        self.conv1 = nn.Conv2d(in_channels, 32, 3, 1, 1)
+        self.lrelu1 = nn.LeakyReLU(0.2, True)
+        self.conv2 = nn.Conv2d(32, 32, 3, 1, 1)
+        self.lrelu2 = nn.LeakyReLU(0.2, True)
+        self.lrelu3 = nn.LeakyReLU(0.2, True)
+
+    
+    def forward(self, x):
+        x_id = x
+        x = self.lrelu1(self.conv1(x))
+        x = self.conv2(x)
+        if self.add_activate:
+            x = self.lrelu2(x)
+        x = self.lrelu3(x + x_id)
+        return x
 
