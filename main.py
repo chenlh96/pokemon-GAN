@@ -7,7 +7,7 @@ import dcgan as dc
 import illustration_gan as illust
 import hr_anime_gan as hranime
 import config
-import utils.util as util
+import util
 import dataset as dset
 
 PATH_IMAGE = '../pokemon_dataset/image'
@@ -17,24 +17,25 @@ PATH_MODEL = '../model'
 if not os.path.exists(PATH_MODEL):
     os.makedirs(PATH_MODEL)
 
-IS_ADD_I2V_TAG = False
+IS_ADD_I2V_TAG = True
 
 def main():
     # ------------------- create the dataset -----------------------------
-    f_minst = dset.fmnist('../', download=False, image_size=64)
+    # f_minst = dset.fmnist('../', download=False, image_size=64)
 
     transform=transforms.Compose([transforms.Resize(64), transforms.ToTensor()])
     anime = dset.animeFaceDataset('../anime_face_dataset/anime-faces', transform=transform)
 
-    dataset = dset.pokemonDataset(PATH_IMAGE, PATH_TAG, ['ken sugimori'], IS_ADD_I2V_TAG)
+    dataset = dset.pokemonDataset(PATH_IMAGE, PATH_TAG, ['ken sugimori'], is_add_i2v_tag=IS_ADD_I2V_TAG)
     # mean, std = dset.get_channel_mean_std(dataset, DIM_IMG)
     # mean = [220.43362509, 217.50907014, 212.78514176]
     # std = [71.7985852,  73.64374336, 78.23258064]
     transform=transforms.Compose([transforms.ToTensor(), transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])])
     dataset.set_transform(transform)
 
-    for i in range(20):
-        util.imshow(anime[i][0])
+    for i in range(5):
+        util.imshow(dataset[i][0])
+        print(dataset[i][1])
     return
 
 

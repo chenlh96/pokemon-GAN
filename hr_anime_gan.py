@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-import utils.util as util
+import util
 import torch.optim as optim
 import torch.autograd as autograd
 import custom_layers as op
