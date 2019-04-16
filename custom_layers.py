@@ -104,12 +104,12 @@ class sub_pixel_cnn(nn.Module):
 
 
 class dis_resBlock(nn.Module):
-    def __init__(self, in_channels=32, out_channels=256, kernel_size=3, stride=1, padding=1, activate_before_addition=True):
+    def __init__(self, in_channels=32, kernel_size=3, stride=1, padding=1, activate_before_addition=True):
         super(dis_resBlock, self).__init__()
         self.add_activate = activate_before_addition
-        self.conv1 = nn.Conv2d(in_channels, 32, 3, 1, 1)
+        self.conv1 = nn.Conv2d(in_channels, in_channels, kernel_size, stride, padding)
         self.lrelu1 = nn.LeakyReLU(0.2, True)
-        self.conv2 = nn.Conv2d(32, 32, 3, 1, 1)
+        self.conv2 = nn.Conv2d(in_channels, in_channels, kernel_size, stride, padding)
         self.lrelu2 = nn.LeakyReLU(0.2, True)
         self.lrelu3 = nn.LeakyReLU(0.2, True)
 

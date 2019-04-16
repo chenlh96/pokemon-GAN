@@ -2,69 +2,74 @@ import torch
 import torch.nn as nn
 import util
 import torch.optim as optim
+import torch.autograd as autograd
 import custom_layers as op
 from torch.utils.data import DataLoader
 
 
 class generator(nn.Module):
 
-    def __init__(self, dim_noise, dim_filter, num_filter, dim_output_img=64, n_channel=3):
+    def __init__(self, dim_noise, dim_label, dim_output_img=64, n_channel=3):
         super(generator, self).__init__()
 
         inplace = True
-        self.fc = nn.Linear(dim_noise, 64 * (16 ** 2))
-        self.bn1 = nn.BatchNorm1d(64 * (16 ** 2))
+        self.fc = nn.Linear(dim_noise + dim_label, 64 * (16 ** 2))
+        self.bn1 = nn.BatchNorm2d(64)
         self.relu1 = nn.ReLU(inplace=inplace)
         self.block = nn.ModuleList([op.sr_resBlock(64) for _ in range(16)])
-        self.bn2 = nn.BatchNorm1d(64 * (16 ** 2))
+        self.bn2 = nn.BatchNorm2d(64)
         self.relu2 = nn.ReLU(inplace=inplace)
-        self.sub_pixel_cnn = nn.ModuleList([op.sub_pixel_cnn(2, 64)])
-        self.sub_pixel_cnn.append([op.sub_pixel_cnn(2, 256) for _ in range(2)])
-        self.conv = nn.Conv2d(256, n_channel, 9, 1, 0)
+        self.sub_pixel_cnn = nn.ModuleList([op.sub_pixel_cnn(2, 64) for _ in range(3)])
+        self.conv = nn.Conv2d(64, n_channel, 9, 1, 4)
         self.tanh = nn.Tanh()
 
-    def forward(self, x):
-        x = self.relu1(self.bn1(self.fc(x)))
+    def forward(self, nz, lb):
+        x = torch.cat([nz, lb], 1)
+        x = self.relu1(self.bn1(self.fc(x).view(-1, 64, 16, 16)))
         x_id = x
         for bk in self.block:
             x = bk(x)
-        x = self.relu2(self.bn(x)) + x_id
+        x = self.relu2(self.bn2(x)) + x_id
         for sub in self.sub_pixel_cnn:
+            print(x.size())
             x = sub(x)
+            print(x.size())
+        print('reach')
         x = self.tanh(self.conv(x))
         return x
 
 
 class discriminator(nn.Module):
 
-    def __init__(self, dim_input_img=128, n_channel = 3):
+    def __init__(self, dim_input_img=128, n_channel = 3, dim_label = 10):
         super(discriminator, self).__init__()
 
         slope = 0.2
         inplace=True
         self.basic1 = nn.ModuleList([nn.Conv2d(n_channel, 32, 4, 2, 1), nn.LeakyReLU(slope, inplace)])
-        self.basic1.append([op.dis_resBlock(32) for _ in range(2)])
+        self.basic1.extend([op.dis_resBlock(32, activate_before_addition=False) for _ in range(2)])
         self.basic2 = nn.ModuleList([nn.Conv2d(32, 64, 4, 2, 1), nn.LeakyReLU(slope, inplace)])
-        self.basic2.append([op.dis_resBlock(64) for _ in range(4)])
+        self.basic2.extend([op.dis_resBlock(64) for _ in range(4)])
         self.basic3 = nn.ModuleList([nn.Conv2d(64, 128, 4, 2, 1), nn.LeakyReLU(slope, inplace)])
-        self.basic3.append([op.dis_resBlock(128) for _ in range(4)])
+        self.basic3.extend([op.dis_resBlock(128) for _ in range(4)])
         self.basic4 = nn.ModuleList([nn.Conv2d(128, 256, 4, 2, 1), nn.LeakyReLU(slope, inplace)])
-        self.basic4.append([op.dis_resBlock(256) for _ in range(4)])
+        self.basic4.extend([op.dis_resBlock(256) for _ in range(4)])
         self.basic5 = nn.ModuleList([nn.Conv2d(256, 512, 4, 2, 1), nn.LeakyReLU(slope, inplace)])
-        self.basic5.append([op.dis_resBlock(512) for _ in range(4)])
+        self.basic5.extend([op.dis_resBlock(512) for _ in range(4)])
         self.basic6 = nn.ModuleList([nn.Conv2d(512, 1024, 3, 2, 1), nn.LeakyReLU(slope, inplace)])
         self.block = nn.ModuleList([self.basic1, self.basic2, self.basic3, self.basic4, self.basic5, self.basic6])
-        num_reduce_half = 5
+        num_reduce_half = 6
         dim_final_kernel = int(dim_input_img / (2 ** num_reduce_half))
         flatten_size = 1024 * (dim_final_kernel ** 2)
         self.fc_score = nn.Linear(flatten_size, 1)
-        self.fc_label = nn.Linear(flatten_size, 34)
+        self.fc_label = nn.Linear(flatten_size, dim_label)
         self.sig = nn.Sigmoid()
 
     def forward(self, x):
         for bk in self.block:
             for bs in bk:
                 x = bs(x)
+        x = x.view(-1)
         x_score = self.sig(self.fc_score(x))
         x_label = self.sig(self.fc_label(x))
 
@@ -86,8 +91,23 @@ def init_weight(layer):
         nn.init.normal_(layer.weight.data, mean=1, std=std)
         nn.init.constant_(layer.bias.data, 0)
 
+def generate_random_label(num_fixed_ns_img, dim_label, device):
+    return torch.randn(num_fixed_ns_img, dim_label, device=device)
 
-def train_base(epochs, batch_size, dim_noise, device, dataset, generator, discriminator, loss, optimizer_gen, optimizer_dis, filepath=None):
+def dragan_penalty(discriminator, input, scale, k, device):
+    b_size = input.size(0)
+    alpha = torch.randn(b_size, 1).extend(input.size())
+    noise = 0.5 * input.std() * torch.randn(input.size())
+    input_nz = input + alpha * noise
+    input_nz.requires_grad_(True)
+    output_nz = discriminator(input_nz)
+    grad = autograd.grad(output_nz, input_nz, torch.ones(output_nz.size()).to(device), \
+        create_graph=True, retain_graph=True, only_inputs=True)[0]
+    penalty = scale * ((grad.norm(2, dim=1) - k)** 2).mean()
+    return penalty
+
+
+def train_base(epochs, batch_size, dim_noise, dim_label, device, dataset, generator, discriminator, loss, loss_class, optimizer_gen, optimizer_dis, filepath=None):
     # load the data
     worker = 2
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=worker)
@@ -96,6 +116,7 @@ def train_base(epochs, batch_size, dim_noise, device, dataset, generator, discri
     loss_list, score_list, img_list = [], [], []
     num_fixed_ns_img = 64
     fixed_noise = torch.randn(num_fixed_ns_img, dim_noise, device=device)
+    fixed_label = generate_random_label(num_fixed_ns_img, dim_label, device=device)
 
     # start iterating the epoch
     for e in range(epochs):
@@ -110,28 +131,36 @@ def train_base(epochs, batch_size, dim_noise, device, dataset, generator, discri
             # ---------------------------
             # generate noise samples from the generator
             batch_noise = torch.randn(b_size, dim_noise, device=device)
-            fake_data = generator(batch_noise)
+            batch_label = generate_random_label(b_size, dim_label, device=device)
+            fake_data = generator(batch_noise, batch_label)
+
 
             # start to train the discriminator
             discriminator.zero_grad()
             # calculate the loss of the noise samples, which assigns the same label 0
             # for all the samples, and get the single output(marks) from the discriminator
-            output = discriminator(fake_data.detach()).view(-1) # use .detach() to stop the requirement of gradient
-            label = torch.full((b_size,), 0, device=device)
-            loss_d_ns = loss(output, label)
-            loss_d_ns.backward()
+            output, output_label = discriminator(fake_data.detach()).view(-1) # use .detach() to stop the requirement of gradient
+            class_label = torch.full((b_size,), 0, device=device)
+            loss_d_ns_adv = loss(output, class_label)
+            loss_d_ns_cls = loss_class(output_label, batch_label)
+            loss_d_ns_adv.backward()
+            loss_d_ns_cls.backward()
             score_dis_fake = output.mean().item()
             
             # calculate the loss of the real samples and assigns label 1 to represent
             # all samples are true and get the single output(marks) from the discriminator
-            read_data = data[0].to(device)
-            output = discriminator(read_data).view(-1)
-            label.fill_(1)
-            loss_d_real = loss(output, label)
-            loss_d_real.backward()
+            real_data = data[0].to(device)
+            real_label = data[1]
+            output, output_label = discriminator(real_data).view(-1)
+            class_label.fill_(1)
+            loss_d_real_adv = loss(output, class_label)
+            loss_d_real_cls = loss_class(output_label, real_label)
+            loss_d_real_adv.backward()
+            loss_d_real_cls.backward()
             score_dis_real = output.mean().item()
 
-            loss_d = loss_d_ns + loss_d_real
+            lambda_adv = len(dim_label)
+            loss_d = lambda_adv * (loss_d_ns_adv + loss_d_real_adv) + loss_d_ns_cls + loss_d_real_cls
             loss_dis = loss_d.item()
             optimizer_dis.step()
 
@@ -144,9 +173,12 @@ def train_base(epochs, batch_size, dim_noise, device, dataset, generator, discri
             generator.zero_grad()            
             # batch_noise = Func.torch.randn(b_size, dim_noise)
             # fake_data = generator(batch_noise)
-            output = discriminator(fake_data).view(-1)
-            loss_g = loss(output, label)
-            loss_g.backward()
+            output, output_label = discriminator(fake_data).view(-1)
+            loss_g_adv = loss(output, class_label)
+            loss_g_cls = loss_class(output_label, batch_label)
+            loss_g_adv.backward()
+            loss_g_cls.backward()
+            loss_g = lambda_adv * loss_g_adv + loss_g_cls
             score_gen = output.mean().item()
             loss_gen = loss_g.item()
             optimizer_gen.step()
@@ -167,7 +199,7 @@ def train_base(epochs, batch_size, dim_noise, device, dataset, generator, discri
         loss_list.append([loss_dis, loss_gen])
         score_list.append([score_dis_fake, score_dis_real, score_gen])
         # store the image that the generator create for each epoch
-        test_img = generator(fixed_noise)
+        test_img = generator(fixed_noise, fixed_label)
         test_img = test_img.detach().cpu()
         img_list.append(test_img.numpy())
 
@@ -181,7 +213,7 @@ def train_base(epochs, batch_size, dim_noise, device, dataset, generator, discri
     return generator, discriminator, loss_list, score_list, img_list
 
 def build_gen_dis(config):
-    net_gen = generator(config.DIM_NOISE, config.DIM_IMG, config.N_CHANNEL).to(config.DEVICE)
+    net_gen = generator(config.DIM_NOISE, 34, config.DIM_IMG, config.N_CHANNEL).to(config.DEVICE)
     net_dis = discriminator(config.DIM_IMG, config.N_CHANNEL).to(config.DEVICE)
 
     if config.INIT:
@@ -197,16 +229,14 @@ def build_gen_dis(config):
 def train(dataset, net_gen, net_dis, config):
 
     # config = config.config_illustration_gan
-    # net_gen = generator(config.DIM_NOISE, config.DIM_IMG).to(config.DEVICE)
-    # net_dis = discriminator(config.DIM_IMG).to(config.DEVICE)
-
-    loss_main = nn.BCEWithLogitsLoss()
+    loss_class = nn.BCEWithLogitsLoss()
+    loss_label = nn.CrossEntropyLoss()
 
     optim_gen = optim.Adam(net_gen.parameters(), lr=config.LEARNING_RATE, betas=(config.MOMENTUM, 0.99))
     optim_dis = optim.Adam(net_dis.parameters(), lr=config.LEARNING_RATE, betas=(config.MOMENTUM, 0.99))
 
     net_gen, net_dis, losses, _, imgs = train_base(config.EPOCHS, config.BATCH_SIZE, config.DIM_NOISE, config.DEVICE,
-                                                    dataset, net_gen, net_dis, loss_main, optim_gen, optim_dis, config.PATH_MODEL)
+                                                    dataset, net_gen, net_dis, loss_class, loss_label, optim_gen, optim_dis, config.PATH_MODEL)
     
     return net_gen, net_dis, losses, imgs
 
