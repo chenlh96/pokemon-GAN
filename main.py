@@ -5,8 +5,9 @@ from torchvision import transforms, datasets
 
 import dcgan as dc
 import illustration_gan as illust
+import hr_anime_gan as hranime
 import config
-import util
+import utils.util as util
 import dataset as dset
 
 PATH_IMAGE = '../pokemon_dataset/image'
@@ -44,6 +45,14 @@ def main():
     # _, _, losses, imgs = dc.train(dataset, net_gen, net_dis, CONFIG)
 
     # 2. illustration GAN
+    CONFIG = config.config_illustration_gan
+    net_gen, net_dis = illust.build_gen_dis(CONFIG)
+    print(net_gen)
+    print(net_dis)
+    
+    net_gen, net_dis, losses, imgs = illust.train(anime, net_gen, net_dis, CONFIG)
+
+    # 3. anime GAN in the 2017 paper
     CONFIG = config.config_illustration_gan
     net_gen, net_dis = illust.build_gen_dis(CONFIG)
     print(net_gen)
