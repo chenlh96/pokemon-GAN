@@ -31,10 +31,7 @@ class generator(nn.Module):
             x = bk(x)
         x = self.relu2(self.bn2(x)) + x_id
         for sub in self.sub_pixel_cnn:
-            print(x.size())
             x = sub(x)
-            print(x.size())
-        print('reach')
         x = self.tanh(self.conv(x))
         return x
 
@@ -74,22 +71,6 @@ class discriminator(nn.Module):
         x_label = self.sig(self.fc_label(x))
 
         return x_score, x_label
-
-def init_weight(layer):
-    std = 0.02
-    if type(layer) == nn.ConvTranspose2d:
-        nn.init.normal_(layer.weight.data, mean=0, std=std)
-    elif type(layer) == nn.Conv2d:
-        nn.init.normal_(layer.weight.data, mean=0, std=std)
-    elif type(layer) == nn.Linear:
-        nn.init.normal_(layer.weight.data, mean=0, std=std)
-        nn.init.normal_(layer.bias.data, mean=0, std=std)
-    elif type(layer) == op.minibatch_discrimination:
-         nn.init.normal_(layer.weight.data, mean=0, std=std)
-         nn.init.constant_(layer.bias.data, 0)
-    elif type(layer) == nn.BatchNorm2d:
-        nn.init.normal_(layer.weight.data, mean=1, std=std)
-        nn.init.constant_(layer.bias.data, 0)
 
 def generate_random_label(num_fixed_ns_img, dim_label, device):
     return torch.randn(num_fixed_ns_img, dim_label, device=device)
@@ -133,7 +114,6 @@ def train_base(epochs, batch_size, dim_noise, dim_label, device, dataset, genera
             batch_noise = torch.randn(b_size, dim_noise, device=device)
             batch_label = generate_random_label(b_size, dim_label, device=device)
             fake_data = generator(batch_noise, batch_label)
-
 
             # start to train the discriminator
             discriminator.zero_grad()
@@ -212,9 +192,22 @@ def train_base(epochs, batch_size, dim_noise, dim_label, device, dataset, genera
         
     return generator, discriminator, loss_list, score_list, img_list
 
+def init_weight(layer):
+    std = 0.02
+    if type(layer) == nn.ConvTranspose2d:
+        nn.init.normal_(layer.weight.data, mean=0, std=std)
+    elif type(layer) == nn.Conv2d:
+        nn.init.normal_(layer.weight.data, mean=0, std=std)
+    elif type(layer) == nn.Linear:
+        nn.init.normal_(layer.weight.data, mean=0, std=std)
+        nn.init.normal_(layer.bias.data, mean=0, std=std)
+    elif type(layer) == nn.BatchNorm2d:
+        nn.init.normal_(layer.weight.data, mean=1, std=std)
+        nn.init.constant_(layer.bias.data, 0)
+
 def build_gen_dis(config):
-    net_gen = generator(config.DIM_NOISE, 34, config.DIM_IMG, config.N_CHANNEL).to(config.DEVICE)
-    net_dis = discriminator(config.DIM_IMG, config.N_CHANNEL).to(config.DEVICE)
+    net_gen = generator(config.DIM_NOISE, config.N_LABEL, config.DIM_IMG, config.N_CHANNEL).to(config.DEVICE)
+    net_dis = discriminator(config.DIM_IMG, config.N_CHANNEL, config.N_LABEL).to(config.DEVICE)
 
     if config.INIT:
         net_gen.apply(init_weight)
@@ -235,7 +228,7 @@ def train(dataset, net_gen, net_dis, config):
     optim_gen = optim.Adam(net_gen.parameters(), lr=config.LEARNING_RATE, betas=(config.MOMENTUM, 0.99))
     optim_dis = optim.Adam(net_dis.parameters(), lr=config.LEARNING_RATE, betas=(config.MOMENTUM, 0.99))
 
-    net_gen, net_dis, losses, _, imgs = train_base(config.EPOCHS, config.BATCH_SIZE, config.DIM_NOISE, config.DEVICE,
+    net_gen, net_dis, losses, _, imgs = train_base(config.EPOCHS, config.BATCH_SIZE, config.DIM_NOISE, config.N_LABEL, config.DEVICE,
                                                     dataset, net_gen, net_dis, loss_class, loss_label, optim_gen, optim_dis, config.PATH_MODEL)
     
     return net_gen, net_dis, losses, imgs

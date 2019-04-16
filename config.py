@@ -47,7 +47,7 @@ class config_hr_anime_gan(configBase):
     PATH_MODEL = '../model/hr-anime-gan.pth'
     IS_ADD_I2V_TAG = True
     BATCH_SIZE = 1
-    DIM_IMG = 64
+    DIM_IMG = 128
     DIM_NOISE = 100
     LEARNING_RATE = 0.0002
     MOMENTUM = 0.5
@@ -56,4 +56,5 @@ class config_hr_anime_gan(configBase):
     IMPORT_IDX_EPOCH = EPOCHS
     DEVICE = torch.device("cpu")
     N_CHANNEL = 3
+    N_LABEL = 10
 

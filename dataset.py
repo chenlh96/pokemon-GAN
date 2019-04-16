@@ -81,8 +81,8 @@ class pokemonDataset(Dataset):
                         csv_dict[aw] = [self.tag_dir + '/' + csv_f]
                         print(self.is_add_i2v_tag)
                     if self.is_add_i2v_tag and 'i2v' in csv_f:
-                        csv_dict[aw] = csv_dict[aw].append(self.tag_dir + '/' + csv_f)
-                        print(csv_dict[aw])
+                        new_tag = [csv_dict[aw][0], self.tag_dir + '/' + csv_f]
+                        csv_dict[aw] = new_tag
 
         self.sample_dir = []
         for aw in self.artwork_types:
@@ -96,7 +96,7 @@ class pokemonDataset(Dataset):
                 with open(csv_dict[aw][1], 'r') as f:
                     tagReader = csv.reader(f)
                     next(tagReader, None)
-                    for i, row in zip(tagReader, len(list_tag)):
+                    for i, row in enumerate(tagReader):
                         list_tag[i] = list_tag[i] + row[1:]
 
             path_aug = self.image_dir + '/' + aw
