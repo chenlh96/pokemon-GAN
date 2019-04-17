@@ -32,6 +32,12 @@ def imshow(img_tensor):
     plt.imshow(img)
     plt.show()
 
+def make_figure_grid_dataset(dataset, grid_size):
+    img_torch_grid = torch.zeros(grid_size ** 2, dataset[0][0].size(0), dataset[0][0].size(1), dataset[0][0].size(2))
+    for i in range(grid_size ** 2):
+        img_torch_grid[i] = dataset[i][0]
+    return make_figure_grid(img_torch_grid, grid_size)
+
 def make_figure_grid(img, grid_size, vmin=None, vmax=None, bright=0):
     assert type(img) == torch.Tensor or type(img) == np.ndarray
     if type(img) == np.ndarray:

@@ -77,7 +77,7 @@ class pokemonDataset(Dataset):
             csv_dict[aw] = None
             for csv_f in list_csv:
                 if os.path.isfile(self.tag_dir + '/' + csv_f) and aw in csv_f:
-                    if 'i2v' not in csv_f:
+                    if 'code' in csv_f:
                         csv_dict[aw] = [self.tag_dir + '/' + csv_f]
                     if self.is_add_i2v_tag and 'i2v' in csv_f:
                         new_tag = [csv_dict[aw][0], self.tag_dir + '/' + csv_f]
@@ -142,16 +142,16 @@ class animeFaceDataset(Dataset):
         
         return [img]
 
-class fmnist(Dataset):
+class cifar10(Dataset):
 
     def __init__(self, root_dir, download, image_size = 64):
         self.root = root_dir
         self.download = download
-        self.transform = [transforms.Resize(image_size), transforms.ToTensor()]
+        self.transform = [transforms.Resize(image_size, interpolation=2), transforms.ToTensor()]
         transform_composite=transforms.Compose(self.transform)
 
-        self.f_mnist_train = datasets.FashionMNIST(self.root + '/train/', train=True, download=self.download, transform=transform_composite)
-        self.f_mnist_test = datasets.FashionMNIST(self.root + '/test/', train=False, download=self.download, transform=transform_composite)
+        self.f_mnist_train = datasets.CIFAR10(self.root + '/train/', train=True, download=self.download, transform=transform_composite)
+        self.f_mnist_test = datasets.CIFAR10(self.root + '/test/', train=False, download=self.download, transform=transform_composite)
 
     def __len__(self):
         return len(self.f_mnist_train) + len(self.f_mnist_test)

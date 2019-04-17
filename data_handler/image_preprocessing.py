@@ -80,31 +80,57 @@ def get_i2v_tags_2csv(csv_dir, img_folder_dir, illust2vec, i2v_tag_dict, thresho
             if (len(i2v_tag_dict[t]) > 1):
                 max_val = max(spec_tags.values())
                 # max_idx = list(spec_tags.values()).index(max_val)
-                img_tags.append(list(spec_tags.keys())[max_val])
+                # img_tags.append(list(spec_tags.keys())[max_idx])
+                img_tags.append(max_val)
             else:
                 val = list(spec_tags.values())[0]
                 if (val > threshold):
-                    img_tags.append('True')
+                    # img_tags.append('True')
+                    img_tags.append(1)
                 else:
-                    img_tags.append('False')
+                    # img_tags.append('False')
+                    img_tags.append(0)
         with open(csv_dir, 'a', newline='') as f:
             tagWriter = csv.writer(f)
             tagWriter.writerow(np.concatenate([[img_f[:-4]], img_tags]))
 
-def order_tags(path_csv, path_img_folder):
+def order_tags(path_csv_src, path_img_folder, path_csv_des=None):
+    if path_csv_des == None:
+        path_csv_des = path_csv_src
     tag_dict = {}
-    with open(path_csv, 'r') as f:
+    type_list, ability_list, color_list = [], [], []
+    with open(path_csv_src, 'r') as f:
         tagReader = csv.reader(f)
         for row in tagReader:
             tag_dict[row[0]] = row
+            if row[3] not in type_list:
+                type_list.append(row[3])
+            if row[4] not in type_list:
+                type_list.append(row[4])
+            if row[5] not in ability_list:
+                ability_list.append(row[5])
+            if row[6] not in ability_list:
+                ability_list.append(row[6])
+            if row[7] not in color_list:
+                color_list.append(row[7])
+    
+    type_dict = {k: (i / len(type_list)) for i, k in enumerate(type_list[1:])}
+    ability_dict = {k: (i / len(ability_list)) for i, k in enumerate(ability_list[1:])}
+    color_dict = {k: (i / len(color_list)) for i, k in enumerate(color_list[1:])}
 
     list_img_name = listdir(path_img_folder)
     
-    with open(path_csv, 'w', newline = '') as f:
+    with open(path_csv_des, 'w', newline = '') as f:
         tagWriter = csv.writer(f)
         tagWriter.writerow(['filename', 'index', 'name', 'type1', 'type2', 'ability1', 'ability2', 'color'])
         for name in list_img_name:
-            tagWriter.writerow(tag_dict[name[:-4]])
+            r = tag_dict[name[:-4]]
+            r[3] = type_dict[r[3]]
+            r[4] = type_dict[r[4]]
+            r[5] = ability_dict[r[5]]
+            r[6] = ability_dict[r[6]]
+            r[7] = color_dict[r[7]]
+            tagWriter.writerow(r)
 
 # make new dir
 def makeImageFolderDir(path):
@@ -140,7 +166,7 @@ for aw in ARTWORK:
 
 # Now we first process the tags
 
-PATH_TAG = '../pokemon_dataset/tags/'
+PATH_TAG = 'C:/Users/Leheng Chen/Desktop/HKUST/pokemon-GAN/pokemon_dataset/tags/'
 TAGS = ['eyes', 'smile', 'chibi', 'mouth', 'tail']
 PATH_JSON = 'illustration2vec/tag_list.json'
 THRESHOLD = 0.1
@@ -153,10 +179,12 @@ i2v_tag_dict['tail'] = np.delete(i2v_tag_dict['tail'], [0, 1, 3, 5])
 
 # To better looking the tags, we first list the tags by the order of the pokemon index(shown in the folder of origin image)
 
-# for aw in ARTWORK:
-#     path_csv = PATH_TAG + 'pokemon_tag_' + aw + '.csv'
-#     path_img_folder = PATH_ORI + '/' + aw
-#     order_tags(path_csv, path_img_folder)
+for aw in ARTWORK:
+    path_csv = PATH_TAG + 'pokemon_tag_' + aw + '.csv'
+    path_csv_des = PATH_TAG + 'pokemon_tag_' + aw + '_code.csv'
+    path_img_folder = PATH_ORI + '/' + aw
+    order_tags(path_csv, path_img_folder, path_csv_des)
+
 
 for aw in ARTWORK:
     csv_dir = PATH_TAG + 'pokemon_tag_' + aw + '_i2v.csv'

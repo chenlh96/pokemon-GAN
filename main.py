@@ -1,3 +1,4 @@
+import torch
 import os
 import numpy as np
 import matplotlib.pyplot as plt
@@ -21,9 +22,9 @@ IS_ADD_I2V_TAG = True
 
 def main():
     # ------------------- create the dataset -----------------------------
-    # f_minst = dset.fmnist('../', download=False, image_size=64)
+    cifar = dset.cifar10('../cifar', download=False, image_size=64)
 
-    transform=transforms.Compose([transforms.Resize(64), transforms.ToTensor()])
+    transform=transforms.Compose([transforms.Resize(32, interpolation=2), transforms.ToTensor()])
     anime = dset.animeFaceDataset('../anime_face_dataset/anime-faces', transform=transform)
 
     dataset = dset.pokemonDataset(PATH_IMAGE, PATH_TAG, ['ken sugimori'], is_add_i2v_tag=IS_ADD_I2V_TAG)
@@ -33,12 +34,11 @@ def main():
     transform=transforms.Compose([transforms.ToTensor(), transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])])
     dataset.set_transform(transform)
 
-    for i in range(5):
-        util.imshow(dataset[i][0])
-        print(dataset[i][1])
-    return
-
-
+    grid_img = util.make_figure_grid_dataset(cifar, 8)
+    plt.figure()
+    plt.imshow(grid_img)
+    plt.show()
+    
     # ------------------- build and train the model -----------------------------
     # 1. DCGAN
     # CONFIG = config.config_dcgan
@@ -46,20 +46,20 @@ def main():
     # _, _, losses, imgs = dc.train(dataset, net_gen, net_dis, CONFIG)
 
     # 2. illustration GAN
-    CONFIG = config.config_illustration_gan
-    net_gen, net_dis = illust.build_gen_dis(CONFIG)
-    print(net_gen)
-    print(net_dis)
+    # CONFIG = config.config_illustration_gan
+    # net_gen, net_dis = illust.build_gen_dis(CONFIG)
+    # print(net_gen)
+    # print(net_dis)
     
-    net_gen, net_dis, losses, imgs = illust.train(anime, net_gen, net_dis, CONFIG)
+    # net_gen, net_dis, losses, imgs = illust.train(anime, net_gen, net_dis, CONFIG)
 
     # 3. anime GAN in the 2017 paper
-    CONFIG = config.config_illustration_gan
-    net_gen, net_dis = illust.build_gen_dis(CONFIG)
+    CONFIG = config.config_hr_anime_gan
+    net_gen, net_dis = hranime.build_gen_dis(CONFIG)
     print(net_gen)
     print(net_dis)
     
-    net_gen, net_dis, losses, imgs = illust.train(anime, net_gen, net_dis, CONFIG)
+    net_gen, net_dis, losses, imgs = hranime.train(dataset, net_gen, net_dis, CONFIG)
 
 
     # ------------------ visualize the result and evaluation --------------------------------
