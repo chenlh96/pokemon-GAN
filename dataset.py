@@ -79,7 +79,6 @@ class pokemonDataset(Dataset):
                 if os.path.isfile(self.tag_dir + '/' + csv_f) and aw in csv_f:
                     if 'i2v' not in csv_f:
                         csv_dict[aw] = [self.tag_dir + '/' + csv_f]
-                        print(self.is_add_i2v_tag)
                     if self.is_add_i2v_tag and 'i2v' in csv_f:
                         new_tag = [csv_dict[aw][0], self.tag_dir + '/' + csv_f]
                         csv_dict[aw] = new_tag

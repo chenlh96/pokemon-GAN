@@ -79,8 +79,8 @@ def get_i2v_tags_2csv(csv_dir, img_folder_dir, illust2vec, i2v_tag_dict, thresho
             spec_tags = illust2vec.estimate_specific_tags([img], i2v_tag_dict[t])[0]
             if (len(i2v_tag_dict[t]) > 1):
                 max_val = max(spec_tags.values())
-                max_idx = list(spec_tags.values()).index(max_val)
-                img_tags.append(list(spec_tags.keys())[max_idx])
+                # max_idx = list(spec_tags.values()).index(max_val)
+                img_tags.append(list(spec_tags.keys())[max_val])
             else:
                 val = list(spec_tags.values())[0]
                 if (val > threshold):

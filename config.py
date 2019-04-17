@@ -46,7 +46,7 @@ class config_illustration_gan(configBase):
 class config_hr_anime_gan(configBase):
     PATH_MODEL = '../model/hr-anime-gan.pth'
     IS_ADD_I2V_TAG = True
-    BATCH_SIZE = 1
+    BATCH_SIZE = 2
     DIM_IMG = 128
     DIM_NOISE = 100
     LEARNING_RATE = 0.0002

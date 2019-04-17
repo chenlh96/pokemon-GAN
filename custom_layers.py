@@ -89,9 +89,9 @@ class sr_resBlock(nn.Module):
         return x
 
 
-class sub_pixel_cnn(nn.Module):
+class sub_pixel_deconv2d(nn.Module):
     def __init__(self, scale_factor, in_channels, out_channels=256, kernel_size=3, stride=1, padding=1):
-        super(sub_pixel_cnn, self).__init__()
+        super(sub_pixel_deconv2d, self).__init__()
         self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding)
         self.pshuffle = nn.PixelShuffle(scale_factor)
         self.bn = nn.BatchNorm2d(int(out_channels / (scale_factor ** 2)))

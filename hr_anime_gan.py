@@ -19,7 +19,7 @@ class generator(nn.Module):
         self.block = nn.ModuleList([op.sr_resBlock(64) for _ in range(16)])
         self.bn2 = nn.BatchNorm2d(64)
         self.relu2 = nn.ReLU(inplace=inplace)
-        self.sub_pixel_cnn = nn.ModuleList([op.sub_pixel_cnn(2, 64) for _ in range(3)])
+        self.sub_pixel_deconv2d = nn.ModuleList([op.sub_pixel_deconv2d(2, 64) for _ in range(3)])
         self.conv = nn.Conv2d(64, n_channel, 9, 1, 4)
         self.tanh = nn.Tanh()
 
@@ -30,7 +30,7 @@ class generator(nn.Module):
         for bk in self.block:
             x = bk(x)
         x = self.relu2(self.bn2(x)) + x_id
-        for sub in self.sub_pixel_cnn:
+        for sub in self.sub_pixel_deconv2d:
             x = sub(x)
         x = self.tanh(self.conv(x))
         return x
@@ -57,16 +57,16 @@ class discriminator(nn.Module):
         self.block = nn.ModuleList([self.basic1, self.basic2, self.basic3, self.basic4, self.basic5, self.basic6])
         num_reduce_half = 6
         dim_final_kernel = int(dim_input_img / (2 ** num_reduce_half))
-        flatten_size = 1024 * (dim_final_kernel ** 2)
-        self.fc_score = nn.Linear(flatten_size, 1)
-        self.fc_label = nn.Linear(flatten_size, dim_label)
+        self.flatten_size = 1024 * (dim_final_kernel ** 2)
+        self.fc_score = nn.Linear(self.flatten_size, 1)
+        self.fc_label = nn.Linear(self.flatten_size, dim_label)
         self.sig = nn.Sigmoid()
 
     def forward(self, x):
         for bk in self.block:
             for bs in bk:
                 x = bs(x)
-        x = x.view(-1)
+        x = x.view(-1, self.flatten_size)
         x_score = self.sig(self.fc_score(x))
         x_label = self.sig(self.fc_label(x))
 
@@ -77,11 +77,12 @@ def generate_random_label(num_fixed_ns_img, dim_label, device):
 
 def dragan_penalty(discriminator, input, scale, k, device):
     b_size = input.size(0)
-    alpha = torch.randn(b_size, 1).extend(input.size())
+    print(input.size())
+    alpha = torch.randn(b_size, 1, 1, 1).expand(input.size())
     noise = 0.5 * input.std() * torch.randn(input.size())
     input_nz = input + alpha * noise
     input_nz.requires_grad_(True)
-    output_nz = discriminator(input_nz)
+    output_nz, _ = discriminator(input_nz)
     grad = autograd.grad(output_nz, input_nz, torch.ones(output_nz.size()).to(device), \
         create_graph=True, retain_graph=True, only_inputs=True)[0]
     penalty = scale * ((grad.norm(2, dim=1) - k)** 2).mean()
@@ -119,28 +120,32 @@ def train_base(epochs, batch_size, dim_noise, dim_label, device, dataset, genera
             discriminator.zero_grad()
             # calculate the loss of the noise samples, which assigns the same label 0
             # for all the samples, and get the single output(marks) from the discriminator
-            output, output_label = discriminator(fake_data.detach()).view(-1) # use .detach() to stop the requirement of gradient
+            output, output_label = discriminator(fake_data.detach())  # use .detach() to stop the requirement of gradient
+            output = output.view(-1)
             class_label = torch.full((b_size,), 0, device=device)
+
             loss_d_ns_adv = loss(output, class_label)
             loss_d_ns_cls = loss_class(output_label, batch_label)
-            loss_d_ns_adv.backward()
-            loss_d_ns_cls.backward()
+            lambda_adv = dim_label
+            loss_d_ns = lambda_adv * loss_d_ns_adv + loss_d_ns_cls
+            loss_d_ns.backward()
             score_dis_fake = output.mean().item()
             
             # calculate the loss of the real samples and assigns label 1 to represent
             # all samples are true and get the single output(marks) from the discriminator
             real_data = data[0].to(device)
-            real_label = data[1]
-            output, output_label = discriminator(real_data).view(-1)
+            real_label = data[1][0]
+            output, output_label = discriminator(real_data)
+            output = output.view(-1)
             class_label.fill_(1)
             loss_d_real_adv = loss(output, class_label)
             loss_d_real_cls = loss_class(output_label, real_label)
-            loss_d_real_adv.backward()
-            loss_d_real_cls.backward()
+            loss_d_real = lambda_adv * loss_d_real_adv + loss_d_real_cls
+            loss_d_real.backward()
+            loss_d_penelty = dragan_penalty(discriminator, real_data, lambda_adv, 1, device)
+            loss_d_penelty.backward()
+            loss_d = loss_d_ns + loss_d_real + loss_d_penelty
             score_dis_real = output.mean().item()
-
-            lambda_adv = len(dim_label)
-            loss_d = lambda_adv * (loss_d_ns_adv + loss_d_real_adv) + loss_d_ns_cls + loss_d_real_cls
             loss_dis = loss_d.item()
             optimizer_dis.step()
 
@@ -153,12 +158,12 @@ def train_base(epochs, batch_size, dim_noise, dim_label, device, dataset, genera
             generator.zero_grad()            
             # batch_noise = Func.torch.randn(b_size, dim_noise)
             # fake_data = generator(batch_noise)
-            output, output_label = discriminator(fake_data).view(-1)
+            output, output_label = discriminator(fake_data)
+            output = output.view(-1)
             loss_g_adv = loss(output, class_label)
             loss_g_cls = loss_class(output_label, batch_label)
-            loss_g_adv.backward()
-            loss_g_cls.backward()
             loss_g = lambda_adv * loss_g_adv + loss_g_cls
+            loss_g.backward()
             score_gen = output.mean().item()
             loss_gen = loss_g.item()
             optimizer_gen.step()
@@ -222,8 +227,8 @@ def build_gen_dis(config):
 def train(dataset, net_gen, net_dis, config):
 
     # config = config.config_illustration_gan
-    loss_class = nn.BCEWithLogitsLoss()
-    loss_label = nn.CrossEntropyLoss()
+    loss_class = nn.BCEWithLogitsLoss().to(config.DEVICE)
+    loss_label = nn.MultiLabelSoftMarginLoss().to(config.DEVICE)
 
     optim_gen = optim.Adam(net_gen.parameters(), lr=config.LEARNING_RATE, betas=(config.MOMENTUM, 0.99))
     optim_dis = optim.Adam(net_dis.parameters(), lr=config.LEARNING_RATE, betas=(config.MOMENTUM, 0.99))
