@@ -72,17 +72,26 @@ class discriminator(nn.Module):
 
         return x_score, x_label
 
-def generate_random_label(num_fixed_ns_img, dim_label, device):
-    return torch.randn(num_fixed_ns_img, dim_label, device=device)
+def generate_random_label(b_size, dim_label, bernoulli_idx, device):
+    rand_label = torch.empty(b_size, dim_label, device=device)
+    rand_label.uniform_(0, 1)
+    rand_label[:,7] = torch.bernoulli(rand_label[:,7])
+    return rand_label
 
-def dragan_penalty(discriminator, input, scale, k, device):
+
+def dragan_penalty(discriminator, input, scale, k, device, init_dist = 'uniform'):
     b_size = input.size(0)
-    alpha = torch.randn(b_size, 1, 1, 1).expand(input.size())
+    alpha = None
+    if init_dist == 'uniform':
+        alpha = torch.empty(b_size, 1, 1, 1).uniform_(0, 1)
+        alpha = alpha.expand(input.size())
+    else:
+        alpha = torch.randn(b_size, 1, 1, 1).expand(input.size())
     noise = 0.5 * input.std() * torch.randn(input.size())
     input_nz = input + alpha * noise
     input_nz.requires_grad_(True)
     output_nz, _ = discriminator(input_nz)
-    grad = autograd.grad(output_nz, input_nz, torch.ones(output_nz.size()).to(device), \
+    grad = autograd.grad(output_nz, input_nz, torch.ones(output_nz.size()), \
         create_graph=True, retain_graph=True, only_inputs=True)[0]
     penalty = scale * ((grad.norm(2, dim=1) - k)** 2).mean()
     return penalty
@@ -90,6 +99,7 @@ def dragan_penalty(discriminator, input, scale, k, device):
 
 def train_base(epochs, batch_size, dim_noise, dim_label, device, dataset, generator, discriminator, loss, loss_class, optimizer_gen, optimizer_dis, filepath=None):
     # load the data
+    bernoulli_idx=7
     worker = 2
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=worker)
     
@@ -97,7 +107,7 @@ def train_base(epochs, batch_size, dim_noise, dim_label, device, dataset, genera
     loss_list, score_list, img_list = [], [], []
     num_fixed_ns_img = 64
     fixed_noise = torch.randn(num_fixed_ns_img, dim_noise, device=device)
-    fixed_label = generate_random_label(num_fixed_ns_img, dim_label, device=device)
+    fixed_label = generate_random_label(num_fixed_ns_img, dim_label, bernoulli_idx, device=device)
 
     # start iterating the epoch
     for e in range(epochs):
@@ -112,7 +122,7 @@ def train_base(epochs, batch_size, dim_noise, dim_label, device, dataset, genera
             # ---------------------------
             # generate noise samples from the generator
             batch_noise = torch.randn(b_size, dim_noise, device=device)
-            batch_label = generate_random_label(b_size, dim_label, device=device)
+            batch_label = generate_random_label(b_size, dim_label, bernoulli_idx, device=device)
             fake_data = generator(batch_noise, batch_label)
 
             # start to train the discriminator
@@ -133,7 +143,7 @@ def train_base(epochs, batch_size, dim_noise, dim_label, device, dataset, genera
             # calculate the loss of the real samples and assigns label 1 to represent
             # all samples are true and get the single output(marks) from the discriminator
             real_data = data[0].to(device)
-            real_label = data[1].float()
+            real_label = data[1]
             output, output_label = discriminator(real_data)
             output = output.view(-1)
             class_label.fill_(1)
@@ -170,7 +180,7 @@ def train_base(epochs, batch_size, dim_noise, dim_label, device, dataset, genera
 
             # print information to the console
             # print information 5 times in a epoch
-            num2print = 30
+            num2print = 5
             if (i + 1) % num2print == 0:
                 print('epoch: %d, iter: %d, loss_D: %.4f, loss_G: %.4f;\t Scores: train D: D(x): %.4f, D(G(z)): %.4f train G: D(G(z))： %.4f'
                         % (e, (i + 1), loss_dis, loss_gen, score_dis_real, score_dis_fake, score_gen))           

@@ -79,17 +79,17 @@ def get_i2v_tags_2csv(csv_dir, img_folder_dir, illust2vec, i2v_tag_dict, thresho
             spec_tags = illust2vec.estimate_specific_tags([img], i2v_tag_dict[t])[0]
             if (len(i2v_tag_dict[t]) > 1):
                 max_val = max(spec_tags.values())
-                # max_idx = list(spec_tags.values()).index(max_val)
-                # img_tags.append(list(spec_tags.keys())[max_idx])
-                img_tags.append(max_val)
+                max_idx = list(spec_tags.values()).index(max_val)
+                img_tags.append(list(spec_tags.keys())[max_idx])
+                # img_tags.append(max_val)
             else:
                 val = list(spec_tags.values())[0]
                 if (val > threshold):
-                    # img_tags.append('True')
-                    img_tags.append(1)
+                    img_tags.append('True')
+                    # img_tags.append(1)
                 else:
-                    # img_tags.append('False')
-                    img_tags.append(0)
+                    img_tags.append('False')
+                    # img_tags.append(0)
         with open(csv_dir, 'a', newline='') as f:
             tagWriter = csv.writer(f)
             tagWriter.writerow(np.concatenate([[img_f[:-4]], img_tags]))
@@ -130,6 +130,33 @@ def order_tags(path_csv_src, path_img_folder, path_csv_des=None):
             r[5] = ability_dict[r[5]]
             r[6] = ability_dict[r[6]]
             r[7] = color_dict[r[7]]
+            tagWriter.writerow(r)
+
+
+def order_tags_i2v(i2v_tag_dict, path_csv_src, path_csv_des=None):
+    if path_csv_des == None:
+        path_csv_des = path_csv_src
+    tag_dict = []
+    with open(path_csv_src, 'r') as f:
+        tagReader = csv.reader(f)
+        for row in tagReader:
+            tag_dict.append(row)
+
+    label_keys = list(i2v_tag_dict.keys())
+    
+    with open(path_csv_des, 'w', newline = '') as f:
+        tagWriter = csv.writer(f)
+        tagWriter.writerow(np.concatenate([['filename'], TAGS]))
+        for r in tag_dict[1:]:
+            for i, t in enumerate(r[1:]):
+                if (len(i2v_tag_dict[label_keys[i]]) > 1):
+                    r[i + 1] = np.where(i2v_tag_dict[label_keys[i]] == t)[0][0] / len(i2v_tag_dict[label_keys[i]])
+                else:
+                    if r[i + 1] == 'True':
+                        r[i + 1] = 1
+                    else:
+                        r[i + 1] = 0
+            print(r)
             tagWriter.writerow(r)
 
 # make new dir
@@ -189,5 +216,7 @@ for aw in ARTWORK:
 for aw in ARTWORK:
     csv_dir = PATH_TAG + 'pokemon_tag_' + aw + '_i2v.csv'
     img_floder = PATH_ORI + '/' + aw
-    get_i2v_tags_2csv(csv_dir, img_floder, illust2vec, i2v_tag_dict, THRESHOLD)
+    # get_i2v_tags_2csv(csv_dir, img_floder, illust2vec, i2v_tag_dict, THRESHOLD)
+    csv_des = PATH_TAG + 'pokemon_tag_' + aw + '_i2v_code.csv'
+    order_tags_i2v(i2v_tag_dict, csv_dir, csv_des)
 

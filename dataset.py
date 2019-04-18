@@ -61,7 +61,7 @@ class pokemonDataset(Dataset):
         if self.transform:
             img = self.transform(img)
         tag = [round(float(i), 4) for i in sel_sample[1:]]
-        tag = np.asarray(tag)
+        tag = np.asarray(tag, dtype=np.float32)
         sel_sample = (img, tag)
         return sel_sample
     
@@ -79,9 +79,9 @@ class pokemonDataset(Dataset):
             csv_dict[aw] = None
             for csv_f in list_csv:
                 if os.path.isfile(self.tag_dir + '/' + csv_f) and aw in csv_f:
-                    if 'code' in csv_f:
+                    if 'code' in csv_f and 'i2v' not in csv_f:
                         csv_dict[aw] = [self.tag_dir + '/' + csv_f]
-                    if self.is_add_i2v_tag and 'i2v' in csv_f:
+                    if self.is_add_i2v_tag and 'i2v' in csv_f and  'code' in csv_f:
                         new_tag = [csv_dict[aw][0], self.tag_dir + '/' + csv_f]
                         csv_dict[aw] = new_tag
 
