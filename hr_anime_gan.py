@@ -77,7 +77,6 @@ def generate_random_label(num_fixed_ns_img, dim_label, device):
 
 def dragan_penalty(discriminator, input, scale, k, device):
     b_size = input.size(0)
-    print(input.size())
     alpha = torch.randn(b_size, 1, 1, 1).expand(input.size())
     noise = 0.5 * input.std() * torch.randn(input.size())
     input_nz = input + alpha * noise
@@ -134,7 +133,7 @@ def train_base(epochs, batch_size, dim_noise, dim_label, device, dataset, genera
             # calculate the loss of the real samples and assigns label 1 to represent
             # all samples are true and get the single output(marks) from the discriminator
             real_data = data[0].to(device)
-            real_label = data[1][0]
+            real_label = data[1].float()
             output, output_label = discriminator(real_data)
             output = output.view(-1)
             class_label.fill_(1)

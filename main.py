@@ -1,4 +1,3 @@
-import torch
 import os
 import numpy as np
 import matplotlib.pyplot as plt
@@ -38,6 +37,7 @@ def main():
     plt.figure()
     plt.imshow(grid_img)
     plt.show()
+    
     
     # ------------------- build and train the model -----------------------------
     # 1. DCGAN

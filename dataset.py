@@ -60,7 +60,9 @@ class pokemonDataset(Dataset):
         
         if self.transform:
             img = self.transform(img)
-        sel_sample = (img, sel_sample[1:])
+        tag = [round(float(i), 4) for i in sel_sample[1:]]
+        tag = np.asarray(tag)
+        sel_sample = (img, tag)
         return sel_sample
     
     def set_transform(self, transform):
