@@ -275,10 +275,19 @@ def build_gen_dis(config):
     if config.INIT:
         net_gen.apply(init_weight)
         net_dis.apply(init_weight)
+        print('initialize model successed')
     else:
-        ext = config.PATH_MODEL[-4]
-        path_model = config.PATH_IMPORT_MODEL[:-4] + '_epoch_%d' + ext % config.IMPORT_IDX_EPOCH
-        net_gen, net_dis = util.load_checkpoint(config.EPOCHS, net_gen, net_dis, path_model)
+        ext = config.PATH_MODEL[-4:]
+        path_model = config.PATH_IMPORT_MODEL[:-4] + '_epoch_%d' % config.IMPORT_IDX_EPOCH
+        print(path_model)
+        path_model = path_model + ext
+        print(path_model)
+        if config.DEVICE == torch.device("cpu"):
+            device = 'cpu'
+        else:
+            device = 'cuda:0'
+        net_gen, net_dis = util.load_checkpoint(config.EPOCHS, net_gen, net_dis, path_model, device)
+        print("load model successed.")
 
     return net_gen, net_dis
 

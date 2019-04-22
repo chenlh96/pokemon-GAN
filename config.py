@@ -30,7 +30,7 @@ class config_dcgan(configBase):
     N_CHANNEL = 3
 
 class config_illustration_gan(configBase):
-    PATH_MODEL = '../model/illustration-gan.pth'
+    PATH_MODEL = '../model/illust_gan.pth'
     IS_ADD_I2V_TAG = False
     BATCH_SIZE = 1
     DIM_IMG = 64
@@ -38,10 +38,11 @@ class config_illustration_gan(configBase):
     LEARNING_RATE = 0.0002
     MOMENTUM = 0.5
     EPOCHS = 1
-    INIT = True
-    IMPORT_IDX_EPOCH = EPOCHS
+    INIT = False
+    IMPORT_IDX_EPOCH = 39
     DEVICE = torch.device("cpu")
     N_CHANNEL = 3
+    PATH_IMPORT_MODEL = '../model/illust_gan_64_cifar10.pth'
 
 class config_hr_anime_gan(configBase):
     PATH_MODEL = '../model/hr-anime-gan.pth'

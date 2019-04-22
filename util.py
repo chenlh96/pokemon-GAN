@@ -16,9 +16,9 @@ def save_checkpoint(epoch, generator, discriminator, filepath):
     filename = filename + ext
     torch.save({'generator': generator.state_dict(), 'discriminator': discriminator.state_dict()}, filename)
 
-def load_checkpoint(epoch, generator, discriminator, path):
+def load_checkpoint(epoch, generator, discriminator, path, device):
     assert path != None
-    checkpoint = torch.load(path)
+    checkpoint = torch.load(path, map_location=device)
     generator.load_state_dict(checkpoint['generator'])  
     discriminator.load_state_dict(checkpoint['discriminator'])
     return generator, discriminator
@@ -46,7 +46,7 @@ def make_figure_grid(img, grid_size, vmin=None, vmax=None, bright=0):
             img = np.transpose(img, (0, nc, 1, 2))
         img = torch.from_numpy(img)
     assert img.size(0) <= grid_size ** 2
-    grid_img = torchvision.utils.make_grid(img + bright, nrow=grid_size).detach().cpu()
+    grid_img = torchvision.utils.make_grid((img + 1) / 2 + bright, nrow=grid_size).detach().cpu()
     grid_img_np = np.transpose(grid_img.numpy(), (1, 2, 0))
     return grid_img_np
 

@@ -1,3 +1,4 @@
+import torch
 import os
 import numpy as np
 import matplotlib.pyplot as plt
@@ -33,11 +34,13 @@ def main():
     transform=transforms.Compose([transforms.ToTensor(), transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])])
     dataset.set_transform(transform)
 
-    grid_img = util.make_figure_grid_dataset(cifar, 8)
+    grid_img = util.make_figure_grid_dataset(cifar, 20)
     plt.figure()
     plt.imshow(grid_img)
     plt.show()
-    
+    print(dataset[0][1])
+    return
+
     
     # ------------------- build and train the model -----------------------------
     # 1. DCGAN
@@ -46,20 +49,29 @@ def main():
     # _, _, losses, imgs = dc.train(dataset, net_gen, net_dis, CONFIG)
 
     # 2. illustration GAN
-    # CONFIG = config.config_illustration_gan
-    # net_gen, net_dis = illust.build_gen_dis(CONFIG)
+    CONFIG = config.config_illustration_gan
+    net_gen, net_dis = illust.build_gen_dis(CONFIG)
+    print(net_gen)
+    print(net_dis)
+
+    # load the gan model and test its result
+    gird_size = 8
+    fixed_noise = torch.randn(gird_size ** 2, CONFIG.DIM_NOISE, device=CONFIG.DEVICE)
+    o, _ = net_gen(fixed_noise)
+    plt.figure()
+    grid_img = util.make_figure_grid(o, gird_size)
+    plt.imshow(grid_img)
+    plt.show()
+    
+    net_gen, net_dis, losses, imgs = illust.train(anime, net_gen, net_dis, CONFIG)
+
+    # 3. anime GAN in the 2017 paper
+    # CONFIG = config.config_hr_anime_gan
+    # net_gen, net_dis = hranime.build_gen_dis(CONFIG)
     # print(net_gen)
     # print(net_dis)
     
-    # net_gen, net_dis, losses, imgs = illust.train(anime, net_gen, net_dis, CONFIG)
-
-    # 3. anime GAN in the 2017 paper
-    CONFIG = config.config_hr_anime_gan
-    net_gen, net_dis = hranime.build_gen_dis(CONFIG)
-    print(net_gen)
-    print(net_dis)
-    
-    net_gen, net_dis, losses, imgs = hranime.train(dataset, net_gen, net_dis, CONFIG)
+    # net_gen, net_dis, losses, imgs = hranime.train(dataset, net_gen, net_dis, CONFIG)
 
 
     # ------------------ visualize the result and evaluation --------------------------------

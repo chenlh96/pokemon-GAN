@@ -114,9 +114,9 @@ def order_tags(path_csv_src, path_img_folder, path_csv_des=None):
             if row[7] not in color_list:
                 color_list.append(row[7])
     
-    type_dict = {k: (i / len(type_list)) for i, k in enumerate(type_list[1:])}
-    ability_dict = {k: (i / len(ability_list)) for i, k in enumerate(ability_list[1:])}
-    color_dict = {k: (i / len(color_list)) for i, k in enumerate(color_list[1:])}
+    type_dict = {k: i for i, k in enumerate(type_list[1:])}
+    ability_dict = {k: i for i, k in enumerate(ability_list[1:])}
+    color_dict = {k: i for i, k in enumerate(color_list[1:])}
 
     list_img_name = listdir(path_img_folder)
     
@@ -150,7 +150,7 @@ def order_tags_i2v(i2v_tag_dict, path_csv_src, path_csv_des=None):
         for r in tag_dict[1:]:
             for i, t in enumerate(r[1:]):
                 if (len(i2v_tag_dict[label_keys[i]]) > 1):
-                    r[i + 1] = np.where(i2v_tag_dict[label_keys[i]] == t)[0][0] / len(i2v_tag_dict[label_keys[i]])
+                    r[i + 1] = np.where(i2v_tag_dict[label_keys[i]] == t)[0][0]
                 else:
                     if r[i + 1] == 'True':
                         r[i + 1] = 1

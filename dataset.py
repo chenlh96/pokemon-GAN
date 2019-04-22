@@ -60,6 +60,7 @@ class pokemonDataset(Dataset):
         
         if self.transform:
             img = self.transform(img)
+        sel_sample[1:] = [int(i) / j for i, j in zip(sel_sample[1:], self.list_len)]
         tag = [round(float(i), 4) for i in sel_sample[1:]]
         tag = np.asarray(tag, dtype=np.float32)
         sel_sample = (img, tag)
@@ -86,6 +87,7 @@ class pokemonDataset(Dataset):
                         csv_dict[aw] = new_tag
 
         self.sample_dir = []
+        self.list_len = [1 for _ in range(10)]
         for aw in self.artwork_types:
             list_tag = []
             with open(csv_dict[aw][0], 'r') as f:
@@ -93,12 +95,14 @@ class pokemonDataset(Dataset):
                 next(tagReader, None)
                 for row in tagReader:
                     list_tag.append(row[3:])
+                    self.list_len[0:5] = [max(self.list_len[i], int(row[3 + i])) for i in range(5)]
             if self.is_add_i2v_tag:
                 with open(csv_dict[aw][1], 'r') as f:
                     tagReader = csv.reader(f)
                     next(tagReader, None)
                     for i, row in enumerate(tagReader):
                         list_tag[i] = list_tag[i] + row[1:]
+                        self.list_len[5:10] = [max(self.list_len[j + 5], int(row[1 + j])) for j in range(5)]
 
             path_aug = self.image_dir + '/' + aw
             list_aug = listdir(path_aug)
@@ -112,6 +116,9 @@ class pokemonDataset(Dataset):
                 for img, tag in zip(list_img, list_tag):
                     path_img_spec = path_img + '/' + img
                     self.sample_dir.append([path_img_spec] + tag)
+
+        self.list_len[0:2] = [max(self.list_len[0] , self.list_len[1]) for _ in range(2)]
+        self.list_len[2:4] = [max(self.list_len[2] , self.list_len[4]) for _ in range(2)]
 
 class animeFaceDataset(Dataset):
     def __init__(self, image_dir, transform=None):
