@@ -22,23 +22,23 @@ IS_ADD_I2V_TAG = True
 
 def main():
     # ------------------- create the dataset -----------------------------
-    cifar = dset.cifar10('../cifar', download=False, image_size=64)
+    # cifar = dset.cifar10('../cifar', download=False, image_size=64)
 
-    transform=transforms.Compose([transforms.Resize(32, interpolation=2), transforms.ToTensor()])
-    anime = dset.animeFaceDataset('../anime_face_dataset/anime-faces', transform=transform)
+    # transform=transforms.Compose([transforms.Resize(32, interpolation=2), transforms.ToTensor()])
+    # anime = dset.animeFaceDataset('../anime_face_dataset/anime-faces', transform=transform)
 
-    dataset = dset.pokemonDataset(PATH_IMAGE, PATH_TAG, ['ken sugimori'], is_add_i2v_tag=IS_ADD_I2V_TAG)
+    dataset = dset.pokemonDataset(PATH_IMAGE, PATH_TAG, ARTWORK_TYPE, is_add_i2v_tag=IS_ADD_I2V_TAG)
     # mean, std = dset.get_channel_mean_std(dataset, DIM_IMG)
     # mean = [220.43362509, 217.50907014, 212.78514176]
     # std = [71.7985852,  73.64374336, 78.23258064]
     transform=transforms.Compose([transforms.ToTensor(), transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])])
     dataset.set_transform(transform)
 
-    grid_img = util.make_figure_grid_dataset(cifar, 20)
+    grid_img = util.make_figure_grid_dataset(dataset, 20)
     plt.figure()
     plt.imshow(grid_img)
     plt.show()
-    print(dataset[0][1])
+    print(dataset[321][1])
     return
 
     
@@ -49,29 +49,29 @@ def main():
     # _, _, losses, imgs = dc.train(dataset, net_gen, net_dis, CONFIG)
 
     # 2. illustration GAN
-    CONFIG = config.config_illustration_gan
-    net_gen, net_dis = illust.build_gen_dis(CONFIG)
-    print(net_gen)
-    print(net_dis)
-
-    # load the gan model and test its result
-    gird_size = 8
-    fixed_noise = torch.randn(gird_size ** 2, CONFIG.DIM_NOISE, device=CONFIG.DEVICE)
-    o, _ = net_gen(fixed_noise)
-    plt.figure()
-    grid_img = util.make_figure_grid(o, gird_size)
-    plt.imshow(grid_img)
-    plt.show()
-    
-    net_gen, net_dis, losses, imgs = illust.train(anime, net_gen, net_dis, CONFIG)
-
-    # 3. anime GAN in the 2017 paper
-    # CONFIG = config.config_hr_anime_gan
-    # net_gen, net_dis = hranime.build_gen_dis(CONFIG)
+    # CONFIG = config.config_illustration_gan
+    # net_gen, net_dis = illust.build_gen_dis(CONFIG)
     # print(net_gen)
     # print(net_dis)
+
+    # # load the gan model and test its result
+    # gird_size = 8
+    # fixed_noise = torch.randn(gird_size ** 2, CONFIG.DIM_NOISE, device=CONFIG.DEVICE)
+    # o, _ = net_gen(fixed_noise)
+    # plt.figure()
+    # grid_img = util.make_figure_grid(o, gird_size)
+    # plt.imshow(grid_img)
+    # plt.show()
     
-    # net_gen, net_dis, losses, imgs = hranime.train(dataset, net_gen, net_dis, CONFIG)
+    # net_gen, net_dis, losses, imgs = illust.train(anime, net_gen, net_dis, CONFIG)
+
+    # 3. anime GAN in the 2017 paper
+    CONFIG = config.config_hr_anime_gan
+    net_gen, net_dis, losses = hranime.build_gen_dis(CONFIG)
+    print(net_gen)
+    print(net_dis)
+    
+    net_gen, net_dis, losses, imgs = hranime.train(dataset, net_gen, net_dis, CONFIG)
 
 
     # ------------------ visualize the result and evaluation --------------------------------

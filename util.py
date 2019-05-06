@@ -6,7 +6,7 @@ import matplotlib.animation as animation
 import torchvision
 
 
-def save_checkpoint(epoch, generator, discriminator, filepath):
+def save_checkpoint(epoch, generator, discriminator, loss, filepath):
     assert filepath != None and 'pt' in filepath 
     len_ext = 2
     if 'pth' in filepath:
@@ -14,14 +14,15 @@ def save_checkpoint(epoch, generator, discriminator, filepath):
     ext = filepath[-(len_ext + 1):]
     filename = filepath[: - (len_ext + 1)] + '_epoch_%d' % epoch
     filename = filename + ext
-    torch.save({'generator': generator.state_dict(), 'discriminator': discriminator.state_dict()}, filename)
+    torch.save({'generator': generator.state_dict(), 'discriminator': discriminator.state_dict(), 'loss': loss}, filename)
 
 def load_checkpoint(epoch, generator, discriminator, path, device):
     assert path != None
     checkpoint = torch.load(path, map_location=device)
     generator.load_state_dict(checkpoint['generator'])  
     discriminator.load_state_dict(checkpoint['discriminator'])
-    return generator, discriminator
+    loss = checkpoint['loss']
+    return generator, discriminator, loss
 
 def imshow(img_tensor):
     img = img_tensor.numpy()

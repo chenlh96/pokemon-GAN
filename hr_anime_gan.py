@@ -199,7 +199,7 @@ def train_base(epochs, batch_size, dim_noise, dim_label, device, dataset, genera
 
         # save the model
         if (e + 1) % 5 == 0:
-            util.save_checkpoint(e, generator, discriminator, filepath)
+            util.save_checkpoint(e + 1, generator, discriminator, loss_list, filepath)
     
     loss_list = list(map(list, zip(*loss_list)))
     score_list = list(map(list, zip(*score_list)))
@@ -226,6 +226,7 @@ def build_gen_dis(config):
     if config.INIT:
         net_gen.apply(init_weight)
         net_dis.apply(init_weight)
+        loss = None
         print('initialize model successed')
     else:
         ext = config.PATH_MODEL[-4:]
@@ -237,10 +238,10 @@ def build_gen_dis(config):
             device = 'cpu'
         else:
             device = 'cuda:0'
-        net_gen, net_dis = util.load_checkpoint(config.EPOCHS, net_gen, net_dis, path_model, device)
+        net_gen, net_dis, loss = util.load_checkpoint(config.EPOCHS, net_gen, net_dis, path_model, device)
         print("load model successed.")
 
-    return net_gen, net_dis
+    return net_gen, net_dis, loss
 
 def train(dataset, net_gen, net_dis, config):
 
