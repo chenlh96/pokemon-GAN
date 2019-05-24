@@ -1,4 +1,4 @@
-# pokemon-GAN
+# Pokemon-GAN
 
 A pratice project for me that aims to:
 
@@ -18,7 +18,7 @@ The goal of the project itself is to generate new pokemon using GAN, to better u
 
 We use the following 3 datasets to test the performance of different GANs
 
-### pokemon dataset
+### Pokemon dataset
 
 This is the main dataset we try to train the GAN since we hope that new pokemon can be generate through the model. The dataset contains about 23000 pictures that are collected from the internet, since the kinds of the pokemon is only 800+, we then collect the pictures from the 3 different artists:
 
@@ -41,12 +41,16 @@ This dataset can be obtain by pytorch
 
 The dowmload site is [here](https://github.com/jayleicn/animeGAN). Thanks @jayleicn to clean the raw data and put it on the cloud.
 
-## architeture of gan
+## architeture of GANs
 
 - DCGAN(DCGAN family): mostly used in generating pokemon, and also we use this model as our benchmark compared to other two GAN network
-- illustrationGAN(MLP + DCGAN): a famous GAN structure that used to generate anime face, project link is [here](https://github.com/tdrussell/IllustrationGAN), we aim to implement this GAN structure in PyTorch
-- animeGAN(ResNet family): a GAN that used to generate high resolution anime gan, we found it in this [paper](https://arxiv.org/pdf/1708.05509.pdf), this GAN use the basic structure from SRResNet and then use ACGAN and DRAGAN techniques to stablized the training procedure.
+- illustrationGAN(MLP + DCGAN): a famous GAN structure that used to generate anime face, project link is [illustrationGAN](https://github.com/tdrussell/IllustrationGAN), we aim to implement this GAN structure in PyTorch
+- animeGAN(ResNet family): a GAN that used to generate high resolution anime gan, we found it in this [Towards the Automatic Anime Characters Creation with Generative Adversarial Networks](https://arxiv.org/pdf/1708.05509.pdf), this GAN use the basic structure from SRResNet and then use ACGAN and DRAGAN techniques to stablized the training procedure.
 
-## Implementation
+## Reuslt
 
-pytorch, PIL, numpy
+For the result, we use 64X64 pixels images for training the DCGAN and illustrationGAN, and use 128X128 pixels images to traing the high resolution anime GAN and obtain the current result:
+[!DCGAN, 200 epochs](img/dcgan_e50_149.png)
+
+For illustrationGAN, we found that for Pokemon dataset, it has better peoformance to normalize the image with channel wise mean and channel wise standard deviation for each channel
+[!illustrationGAN, 90 epochs, normalize each channel with channel wise mean and std](img/illus_gan_nm_e50_e40.png)
