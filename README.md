@@ -50,7 +50,7 @@ The dowmload site is [here](https://github.com/jayleicn/animeGAN). Thanks @jayle
 ## Reuslt
 
 For the result, we use 64X64 pixels images for training the DCGAN and illustrationGAN, and use 128X128 pixels images to traing the high resolution anime GAN and obtain the current result:
-<p align='center>
+<p align="center">
 <img src="img/dcgan_e50_149.png">
 </p>
 
