@@ -31,7 +31,7 @@ Also, we do image augmentations for the images mentioned above to expand our dat
 The image size we are going to test are: 64 * 64, 128 * 128
 
 This is the pictures we collected and have made satuation augmentation:
-![dateset examples](relative/img/ori.png)
+![dateset examples](img/ori.png)
 
 ### Cifar 10
 
