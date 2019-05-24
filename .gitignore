@@ -106,3 +106,5 @@ venv.bak/
 # vscode
 .vscode/
 illustration2vec/
+notes/
+datasets/

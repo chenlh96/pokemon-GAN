@@ -151,7 +151,7 @@ def train_base(epochs, batch_size, dim_noise, dim_label, device, dataset, genera
             loss_d_real_cls = loss_class(output_label, real_label)
             loss_d_real = lambda_adv * loss_d_real_adv + loss_d_real_cls
             loss_d_real.backward()
-            loss_d_penelty = dragan_penalty(discriminator, real_data, lambda_adv, 1, device)
+            loss_d_penelty = dragan_penalty(discriminator, real_data, 0.5, 1, device)
             loss_d_penelty.backward()
             loss_d = loss_d_ns + loss_d_real + loss_d_penelty
             score_dis_real = output.mean().item()

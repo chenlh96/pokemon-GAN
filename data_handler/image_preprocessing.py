@@ -169,14 +169,14 @@ def makeImageFolderDir(path):
 # this is the main part of this script, we will do augmentation and tag the image in
 # the following work
 
-PATH_ORI = 'C:/Users/Leheng Chen/Desktop/HKUST/pokemon-GAN/pokemon_dataset/images_newori'
+PATH_ORI = 'D:/Git Repos/GAN/datasets/pokemon_dataset/images_newori'
 ARTWORK = listdir(PATH_ORI)
-PATH_DATASET = 'C:/Users/Leheng Chen/Desktop/HKUST/pokemon-GAN/pokemon_dataset/image'
+PATH_DATASET = 'D:/Git Repos/GAN/datasets/pokemon_dataset/image/'
 
 ORI_TYPE = 'ori'
 AUGMENTATION_TYPE = ['flip', 'left rotation', 'right roration', 'contrast', 'saturation']
 
-DIMENSION = 64
+DIMENSION = 128
 DEGREE_OF_ROTATE = 15
 CONTRAST = 3
 SATURATION = 1.5
@@ -189,6 +189,7 @@ for aw in ARTWORK:
     for aug in AUGMENTATION_TYPE:
         dest_aug = makeImageFolderDir(dest_aug_folder + '/' + aug)
         augamentation(dest_ori, dest_aug, aug, DIMENSION, DEGREE_OF_ROTATE, CONTRAST, SATURATION)
+        print('finish artwork %s in augmentation %s' % (aw, aug))
 
 
 # Now we first process the tags

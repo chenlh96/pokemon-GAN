@@ -75,10 +75,10 @@ class sr_resBlock(nn.Module):
     
     def __init__(self, in_channels, out_channels=64, kernel_size=3, stride=1, padding=1):
         super(sr_resBlock, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding)
+        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding, bias=False)
         self.bn1 = nn.BatchNorm2d(out_channels)
         self.prelu = nn.ReLU(inplace=True)
-        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size, stride, padding)
+        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size, stride, padding, bias=False)
         self.bn2 = nn.BatchNorm2d(out_channels)
 
     def forward(self, x):
@@ -105,12 +105,11 @@ class sub_pixel_deconv2d(nn.Module):
 
 
 class dis_resBlock(nn.Module):
-    def __init__(self, in_channels=32, kernel_size=3, stride=1, padding=1, activate_before_addition=True):
+    def __init__(self, in_channels=32, kernel_size=3, stride=1, padding=1):
         super(dis_resBlock, self).__init__()
-        self.add_activate = activate_before_addition
-        self.conv1 = nn.Conv2d(in_channels, in_channels, kernel_size, stride, padding)
+        self.conv1 = nn.Conv2d(in_channels, in_channels, kernel_size, stride, padding, bias=False)
         self.lrelu1 = nn.LeakyReLU(0.2, True)
-        self.conv2 = nn.Conv2d(in_channels, in_channels, kernel_size, stride, padding)
+        self.conv2 = nn.Conv2d(in_channels, in_channels, kernel_size, stride, padding, bias=False)
         self.lrelu2 = nn.LeakyReLU(0.2, True)
         self.lrelu3 = nn.LeakyReLU(0.2, True)
 
@@ -118,9 +117,7 @@ class dis_resBlock(nn.Module):
     def forward(self, x):
         x_id = x
         x = self.lrelu1(self.conv1(x))
-        x = self.conv2(x)
-        if self.add_activate:
-            x = self.lrelu2(x)
+        x = self.lrelu2(self.conv2(x))
         x = self.lrelu3(x + x_id)
         return x
 

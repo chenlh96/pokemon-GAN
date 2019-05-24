@@ -11,14 +11,14 @@ import config
 import util
 import dataset as dset
 
-PATH_IMAGE = '../pokemon_dataset/image'
-PATH_TAG = '../pokemon_dataset/tags'
+PATH_IMAGE = 'D:/Git Repos/GAN//datasets/pokemon_dataset/image'
+PATH_TAG = 'D:/Git Repos/GAN//datasets/pokemon_dataset/tags/'
 ARTWORK_TYPE = os.listdir(PATH_IMAGE)
 PATH_MODEL = '../model'
 if not os.path.exists(PATH_MODEL):
     os.makedirs(PATH_MODEL)
 
-IS_ADD_I2V_TAG = True
+IS_ADD_I2V_TAG = False
 
 def main():
     # ------------------- create the dataset -----------------------------
@@ -34,11 +34,10 @@ def main():
     transform=transforms.Compose([transforms.ToTensor(), transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])])
     dataset.set_transform(transform)
 
-    grid_img = util.make_figure_grid_dataset(dataset, 20)
-    plt.figure()
+    grid_img = util.make_figure_grid_dataset(dataset, 8)
+    plt.figure(figsize=(20, 20))
     plt.imshow(grid_img)
     plt.show()
-    print(dataset[321][1])
     return
 
     

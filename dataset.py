@@ -93,7 +93,6 @@ class pokemonDataset(Dataset):
         for aw in self.artwork_types:
             list_tag = []
             with open(csv_dict[aw][0], 'r') as f:
-                print(f)
                 tagReader = csv.reader(f)
                 next(tagReader, None)
                 for row in tagReader:
@@ -164,8 +163,8 @@ class cifar10(Dataset):
         self.transform = [transforms.Resize(image_size, interpolation=2), transforms.ToTensor()]
         transform_composite=transforms.Compose(self.transform)
 
-        self.f_mnist_train = datasets.CIFAR10(self.root + '/train/', train=True, download=self.download, transform=transform_composite)
-        self.f_mnist_test = datasets.CIFAR10(self.root + '/test/', train=False, download=self.download, transform=transform_composite)
+        self.f_mnist_train = datasets.FashionMNIST(self.root + '/train/', train=True, download=self.download, transform=transform_composite)
+        self.f_mnist_test = datasets.FashionMNIST(self.root + '/test/', train=False, download=self.download, transform=transform_composite)
 
     def __len__(self):
         return len(self.f_mnist_train) + len(self.f_mnist_test)
