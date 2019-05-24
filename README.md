@@ -55,4 +55,8 @@ For the result, we use 64X64 pixels images for training the DCGAN and illustrati
 </p>
 
 For illustrationGAN, we found that for Pokemon dataset, it has better peoformance to normalize the image with channel wise mean and channel wise standard deviation for each channel
-![illustrationGAN, 90 epochs, normalize each channel with channel wise mean and std](img/illus_gan_nm_e50_e40.png)
+<p align="center">
+<img src="img/illus_gan_nm_e50_e40.png">
+</p>
+
+For the above images, we can show that the GAN can learn the shape and the basic color for the Pokemon, but can not make details in the small images. Also, there may occurs the mode collapse phenomenon.
