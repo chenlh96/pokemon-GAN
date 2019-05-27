@@ -77,7 +77,8 @@ class sr_resBlock(nn.Module):
         super(sr_resBlock, self).__init__()
         self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding, bias=False)
         self.bn1 = nn.BatchNorm2d(out_channels)
-        self.prelu = nn.ReLU(inplace=True)
+        # self.prelu = nn.ReLU(inplace=True)
+        self.prelu = nn.PReLU()
         self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size, stride, padding, bias=False)
         self.bn2 = nn.BatchNorm2d(out_channels)
 
@@ -93,7 +94,7 @@ class sub_pixel_deconv2d(nn.Module):
     def __init__(self, scale_factor, in_channels, out_channels=256, kernel_size=3, stride=1, padding=1):
         super(sub_pixel_deconv2d, self).__init__()
         out_channels = (scale_factor ** 2) *in_channels
-        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding)
+        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding, bias=False)
         self.pshuffle = nn.PixelShuffle(scale_factor)
         self.bn = nn.BatchNorm2d(int(out_channels / (scale_factor ** 2)))
         self.relu = nn.ReLU(inplace=True)
@@ -107,9 +108,9 @@ class sub_pixel_deconv2d(nn.Module):
 class dis_resBlock(nn.Module):
     def __init__(self, in_channels=32, kernel_size=3, stride=1, padding=1):
         super(dis_resBlock, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels, in_channels, kernel_size, stride, padding, bias=False)
+        self.conv1 = nn.Conv2d(in_channels, in_channels, kernel_size, stride, padding)
         self.lrelu1 = nn.LeakyReLU(0.2, True)
-        self.conv2 = nn.Conv2d(in_channels, in_channels, kernel_size, stride, padding, bias=False)
+        self.conv2 = nn.Conv2d(in_channels, in_channels, kernel_size, stride, padding)
         self.lrelu2 = nn.LeakyReLU(0.2, True)
         self.lrelu3 = nn.LeakyReLU(0.2, True)
 
@@ -117,7 +118,8 @@ class dis_resBlock(nn.Module):
     def forward(self, x):
         x_id = x
         x = self.lrelu1(self.conv1(x))
-        x = self.lrelu2(self.conv2(x))
+        x = self.conv2(x)
+        # x = self.lrelu2(x)
         x = self.lrelu3(x + x_id)
         return x
 

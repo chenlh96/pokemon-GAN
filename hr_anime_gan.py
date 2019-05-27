@@ -43,18 +43,23 @@ class discriminator(nn.Module):
 
         slope = 0.2
         inplace=True
-        self.basic1 = nn.ModuleList([nn.Conv2d(n_channel, 32, 4, 2, 1), nn.LeakyReLU(slope, inplace)])
-        self.basic1.extend([op.dis_resBlock(32, activate_before_addition=False) for _ in range(2)])
-        self.basic2 = nn.ModuleList([nn.Conv2d(32, 64, 4, 2, 1), nn.LeakyReLU(slope, inplace)])
-        self.basic2.extend([op.dis_resBlock(64) for _ in range(4)])
-        self.basic3 = nn.ModuleList([nn.Conv2d(64, 128, 4, 2, 1), nn.LeakyReLU(slope, inplace)])
-        self.basic3.extend([op.dis_resBlock(128) for _ in range(4)])
-        self.basic4 = nn.ModuleList([nn.Conv2d(128, 256, 4, 2, 1), nn.LeakyReLU(slope, inplace)])
-        self.basic4.extend([op.dis_resBlock(256) for _ in range(4)])
-        self.basic5 = nn.ModuleList([nn.Conv2d(256, 512, 4, 2, 1), nn.LeakyReLU(slope, inplace)])
-        self.basic5.extend([op.dis_resBlock(512) for _ in range(4)])
-        self.basic6 = nn.ModuleList([nn.Conv2d(512, 1024, 3, 2, 1), nn.LeakyReLU(slope, inplace)])
-        self.block = nn.ModuleList([self.basic1, self.basic2, self.basic3, self.basic4, self.basic5, self.basic6])
+        self.block = nn.ModuleList([nn.Conv2d(n_channel, 32, 4, 2, 1), nn.LeakyReLU(slope, inplace)])
+        self.block.extend([op.dis_resBlock(32) for _ in range(2)])
+
+        self.block.extend([nn.Conv2d(32, 64, 4, 2, 1), nn.LeakyReLU(slope, inplace)])
+        self.block.extend([op.dis_resBlock(64) for _ in range(4)])
+
+        self.block.extend([nn.Conv2d(64, 128, 4, 2, 1), nn.LeakyReLU(slope, inplace)])
+        self.block.extend([op.dis_resBlock(128) for _ in range(4)])
+
+        self.block.extend([nn.Conv2d(128, 256, 4, 2, 1), nn.LeakyReLU(slope, inplace)])
+        self.block.extend([op.dis_resBlock(256) for _ in range(4)])
+
+        self.block.extend([nn.Conv2d(256, 512, 4, 2, 1), nn.LeakyReLU(slope, inplace)])
+        self.block.extend([op.dis_resBlock(512) for _ in range(4)])
+
+        self.block.extend([nn.Conv2d(512, 1024, 3, 2, 1), nn.LeakyReLU(slope, inplace)])
+
         num_reduce_half = 6
         dim_final_kernel = int(dim_input_img / (2 ** num_reduce_half))
         self.flatten_size = 1024 * (dim_final_kernel ** 2)
@@ -64,8 +69,7 @@ class discriminator(nn.Module):
 
     def forward(self, x):
         for bk in self.block:
-            for bs in bk:
-                x = bs(x)
+            x = bk(x)
         x = x.view(-1, self.flatten_size)
         x_score = self.sig(self.fc_score(x))
         x_label = self.sig(self.fc_label(x))

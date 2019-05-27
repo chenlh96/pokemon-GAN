@@ -27,7 +27,7 @@ def main():
     # transform=transforms.Compose([transforms.Resize(32, interpolation=2), transforms.ToTensor()])
     # anime = dset.animeFaceDataset('../anime_face_dataset/anime-faces', transform=transform)
 
-    dataset = dset.pokemonDataset(PATH_IMAGE, PATH_TAG, ARTWORK_TYPE, is_add_i2v_tag=IS_ADD_I2V_TAG)
+    dataset = dset.pokemonDataset(PATH_IMAGE, PATH_TAG, ARTWORK_TYPE)
     # mean, std = dset.get_channel_mean_std(dataset, DIM_IMG)
     # mean = [220.43362509, 217.50907014, 212.78514176]
     # std = [71.7985852,  73.64374336, 78.23258064]
@@ -38,6 +38,7 @@ def main():
     plt.figure(figsize=(20, 20))
     plt.imshow(grid_img)
     plt.show()
+    print(dataset[1][1])
     return
 
     

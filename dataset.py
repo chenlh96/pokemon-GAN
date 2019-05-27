@@ -31,7 +31,7 @@ def get_channel_mean_std(dataset, dim_img, channel=3):
     return mean, std   
 
 class pokemonDataset(Dataset):
-    def __init__(self, image_dir, tag_dir, artwork_types=None, augmentation_types=None, is_add_i2v_tag=False, transform=None):
+    def __init__(self, image_dir, tag_dir, artwork_types=None, augmentation_types=None, transform=None):
         self.image_dir = image_dir
         self.tag_dir = tag_dir
         self.artwork_types = None
@@ -45,9 +45,11 @@ class pokemonDataset(Dataset):
         if augmentation_types != None:
             self.augmentation_types == augmentation_types
         
-        self.is_add_i2v_tag = is_add_i2v_tag
+        # self.is_add_i2v_tag = is_add_i2v_tag
         self.sample_dir = None
         self.transform = transform
+        self.tag_type_dicts = []
+        self.tag_color_dicts = []
 
         self.load_sample_dir()
 
@@ -57,13 +59,12 @@ class pokemonDataset(Dataset):
     def __getitem__(self, idx):
         sel_sample = self.sample_dir[idx]
         img = Image.open(sel_sample[0], 'r')
+        tags = np.zeros(len(self.tag_dicts))
+        tags[list(map(lambda i: self.tag_dicts[i], sel_sample[1:]))] = 1
         
         if self.transform:
             img = self.transform(img)
-        sel_sample[1:] = [float(i) / j for i, j in zip(sel_sample[1:], self.list_len)]
-        tag = [round(float(i), 4) for i in sel_sample[1:]]
-        tag = np.asarray(tag, dtype=np.float32)
-        sel_sample = (img, tag)
+        sel_sample = (img, tags)
         return sel_sample
     
     def set_transform(self, transform):
@@ -80,32 +81,33 @@ class pokemonDataset(Dataset):
             csv_dict[aw] = None
             for csv_f in list_csv:
                 if os.path.isfile(self.tag_dir + '/' + csv_f) and aw in csv_f:
-                    if 'code' in csv_f and 'i2v' not in csv_f:
+                    if 'code' not in csv_f and 'i2v' not in csv_f:
                         csv_dict[aw] = [self.tag_dir + '/' + csv_f]
-            for csv_f in list_csv:
-                if os.path.isfile(self.tag_dir + '/' + csv_f) and aw in csv_f:
-                    if self.is_add_i2v_tag and 'i2v' in csv_f and 'code' in csv_f:
-                        new_tag = [csv_dict[aw][0], self.tag_dir + '/' + csv_f]
-                        csv_dict[aw] = new_tag
+            # for csv_f in list_csv:
+            #     if os.path.isfile(self.tag_dir + '/' + csv_f) and aw in csv_f:
+            #         if self.is_add_i2v_tag and 'i2v' in csv_f and 'code' in csv_f:
+            #             new_tag = [csv_dict[aw][0], self.tag_dir + '/' + csv_f]
+            #             csv_dict[aw] = new_tag
 
         self.sample_dir = []
-        self.list_len = [1 for _ in range(10)]
         for aw in self.artwork_types:
             list_tag = []
             with open(csv_dict[aw][0], 'r') as f:
                 tagReader = csv.reader(f)
                 next(tagReader, None)
                 for row in tagReader:
-                    list_tag.append(row[3:])
-                    self.list_len[0:5] = [max(self.list_len[i], int(row[3 + i])) for i in range(5)]
-            if self.is_add_i2v_tag:
-                with open(csv_dict[aw][1], 'r') as f:
-                    print(f)
-                    tagReader = csv.reader(f)
-                    next(tagReader, None)
-                    for i, row in enumerate(tagReader):
-                        list_tag[i] = list_tag[i] + row[1:]
-                        self.list_len[5:10] = [max(self.list_len[j + 5], int(row[1 + j])) for j in range(5)]
+                    tags = [row[3], row[4], row[7]]
+                    list_tag.append(tags)
+                    self.tag_type_dicts.extend(tags[0:2])
+                    self.tag_color_dicts.extend([tags[2]])
+            # if self.is_add_i2v_tag:
+            #     with open(csv_dict[aw][1], 'r') as f:
+            #         print(f)
+            #         tagReader = csv.reader(f)
+            #         next(tagReader, None)
+            #         for i, row in enumerate(tagReader):
+            #             list_tag[i] = list_tag[i] + row[1:]
+            #             self.list_len[5:10] = [max(self.list_len[j + 5], int(row[1 + j])) for j in range(5)]
 
             path_aug = self.image_dir + '/' + aw
             list_aug = listdir(path_aug)
@@ -120,9 +122,13 @@ class pokemonDataset(Dataset):
                     path_img_spec = path_img + '/' + img
                     self.sample_dir.append([path_img_spec] + tag)
                     # print(tag)
+        self.tag_type_dicts = set(self.tag_type_dicts)
+        self.tag_color_dicts = set(self.tag_color_dicts)
+        self.tag_dicts = {v: k for k, v in enumerate(self.tag_type_dicts)}
+        tmp_len = len(self.tag_dicts)
+        self.tag_dicts.update({v: k + tmp_len for k, v in enumerate(self.tag_color_dicts)})
+        print(self.tag_dicts)
 
-        self.list_len[0:2] = [max(self.list_len[0] , self.list_len[1]) for _ in range(2)]
-        self.list_len[2:4] = [max(self.list_len[2] , self.list_len[3]) for _ in range(2)]
 
 class animeFaceDataset(Dataset):
     def __init__(self, image_dir, transform=None):

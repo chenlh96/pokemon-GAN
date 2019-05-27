@@ -60,3 +60,8 @@ For illustrationGAN, we found that for Pokemon dataset, it has better peoformanc
 </p>
 
 For the above images, we can show that the GAN can learn the shape and the basic color for the Pokemon, but can not make details in the small images. Also, there may occurs the mode collapse phenomenon.
+
+This is the result of high resolution anime gan
+<p align="center">
+<img src="img/hrgan_e47_e49.png">
+</p>
