@@ -31,6 +31,7 @@ class bilinear_deconv2d(nn.Module):
     def forward(self, x):
         x = self.bilinear(x)
         x = self.conv(x)
+        
         return x
 
 
